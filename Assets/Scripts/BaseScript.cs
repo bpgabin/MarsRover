@@ -4,12 +4,17 @@ using System.Collections.Generic;
 
 public class BaseScript : MonoBehaviour {
 	
+	public Texture front;
+	public Texture back;
+	public Texture left;
+	public Texture right;
+	
 	public enum direction { north, east, west, south }
 	private enum actionType { forward, turnRight, turnLeft }
 	private enum GridTileType { rover, wall, drill, processIn, processOut, tram, open }
 	private GridTile[,] baseGrid;
-	private int GRID_HEIGHT = 10;
-	private int GRID_WIDTH = 12;
+	private int GRID_HEIGHT = 8;
+	private int GRID_WIDTH = 10;
 	private bool running = true;
 	
 	private class GridTile {
@@ -155,8 +160,8 @@ public class BaseScript : MonoBehaviour {
 		newRover.AddAction(actionType.forward);
 		newRover.AddAction(actionType.turnRight);
 		
-		baseGrid[4, 4].SetTileType(GridTileType.rover);
-		baseGrid[4, 4].SetRover(newRover);
+		baseGrid[4, 2].SetTileType(GridTileType.rover);
+		baseGrid[4, 2].SetRover(newRover);
 		
 		StartCoroutine("GridClock");
 	}
@@ -168,11 +173,26 @@ public class BaseScript : MonoBehaviour {
 			for(int i = 0; i < GRID_WIDTH; i++){
 				switch(baseGrid[i, j].GetTileType()){	
 				case GridTileType.open:
-					GUILayout.Box(GUIContent.none, GUILayout.Width(50), GUILayout.Height(50));
+					GUILayout.Box(GUIContent.none, GUILayout.Width(64), GUILayout.Height(64));
 					break;
 				case GridTileType.rover:
-					GUILayout.Box("test", GUILayout.Width(50), GUILayout.Height(50));
-					//GameObject newRover = Instantiate(roverObj, 
+					GUILayout.FlexibleSpace();
+					Rover rover = baseGrid[i, j].GetRover();
+					direction facing = rover.GetDirection();
+					switch(facing){
+					case direction.north:
+						GUI.DrawTexture(new Rect(68 * i, 550 - (70 * (j + 1)), 64, 64), back);
+						break;
+					case direction.east:
+						GUI.DrawTexture(new Rect(68 * i, 550 - (70 * (j + 1)), 64, 64), right);
+						break;
+					case direction.south:
+						GUI.DrawTexture(new Rect(68 * i, 550 - (70 * (j + 1)), 64, 64), front);
+						break;
+					case direction.west:
+						GUI.DrawTexture(new Rect(68 * i, 550 - (70 * (j + 1)), 64, 64), left);
+						break;
+					}
 					break;
 				}
 			}
@@ -232,7 +252,7 @@ public class BaseScript : MonoBehaviour {
 	}
 	
 	void OnGUI(){
-		GUILayout.BeginArea(new Rect(20, 45, 680, 550));
+		GUILayout.BeginArea(new Rect(10, 45, 676, 550));
 		
 		//GUILayout.Box(GUIContent.none, GUILayout.Width(680), GUILayout.Height(550));
 		DrawGame();

@@ -3,10 +3,13 @@ using System.Collections;
 
 public class GUISystem : MonoBehaviour {
 	
+	public Texture background;
 	public GUISkin guiSkin;
 
 	void OnGUI(){
 		GUI.skin = guiSkin;
+		
+		GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), background);
 		
 		//button tabs at the top showing various info
 		GUILayout.BeginArea(new Rect(10, Screen.height - 590, 350, 200));

@@ -112,6 +112,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 20b247b32df69f545ab57937d7af99d7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  front: {fileID: 2800000, guid: d47db5a998661a647b9c93e296d24413, type: 3}
+  back: {fileID: 2800000, guid: 50fe5c94ca3fada4a9ae206c53d0232a, type: 3}
+  left: {fileID: 2800000, guid: 02a9c82acbfb8dd4c85dc125e099dc9f, type: 3}
+  right: {fileID: 2800000, guid: f9329f98e59dfb74bba992f46e74c21e, type: 3}
 --- !u!1 &1833044557
 GameObject:
   m_ObjectHideFlags: 0
@@ -150,7 +154,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c6b20514213f56a4e93120d1fe0e6f48, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  guiSkin: {fileID: 0}
+  background: {fileID: 2800000, guid: 0fd0ccfdaa1a42740bb479437c4115f7, type: 3}
+  guiSkin: {fileID: 11400000, guid: f740041fcd9173a47b550e30169a645b, type: 2}
 --- !u!1 &1870623226
 GameObject:
   m_ObjectHideFlags: 0
@@ -273,7 +278,7 @@ Camera:
   far clip plane: 1000
   field of view: 60
   orthographic: 1
-  orthographic size: 10
+  orthographic size: 17.7000008
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
