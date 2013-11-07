@@ -8,6 +8,7 @@ public class GUISystem : MonoBehaviour {
 
 	void OnGUI(){
 		GUI.skin = guiSkin;
+		GUI.depth = 3;
 		
 		GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), background);
 		
