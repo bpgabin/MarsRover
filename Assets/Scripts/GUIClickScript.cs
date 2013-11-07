@@ -35,19 +35,5 @@ public class GUIClickScript : MonoBehaviour {
 			Destroy(button);
 	}
 	
-	void OnGUI(){
-		GUI.skin = guiSkin;
-		GUILayout.BeginArea(new Rect(0, Screen.height - 200, 200, 200));
-		GUILayout.Box(GUIContent.none, GUILayout.Width(200), GUILayout.Height(200));
-		GUILayout.EndArea();
-		
-		GUILayout.BeginArea(new Rect(0, Screen.height - 200, 200, 200));
-		
-		GUILayout.BeginHorizontal();
-		GUILayout.Button("test");
-		GUILayout.Button("test2");
-		GUILayout.EndHorizontal();
-		
-		GUILayout.EndArea();
-	}
+
 }
