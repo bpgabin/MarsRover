@@ -4,10 +4,13 @@ using System.Collections.Generic;
 
 public class BaseScript : MonoBehaviour {
 	
+	public enum direction { north, east, west, south }
+	private enum actionType { forward, turnRight, turnLeft }
 	private enum GridTileType { rover, wall, drill, processIn, processOut, tram, open }
 	private GridTile[,] baseGrid;
 	private int GRID_HEIGHT = 10;
-	private int GRID_WIDTH = 10;
+	private int GRID_WIDTH = 12;
+	private bool running = true;
 	
 	private class GridTile {
 		private GridTileType tileType;
@@ -21,12 +24,12 @@ public class BaseScript : MonoBehaviour {
 			this.tileType = tileType;	
 		}
 		
-		public void GetTileType () {
+		public GridTileType GetTileType () {
 			return tileType;
 		}
 		
 		public Rover GetRover () {
-			return Rover;	
+			return rover;	
 		}
 		
 		public void SetRover (Rover rover) {
@@ -35,18 +38,60 @@ public class BaseScript : MonoBehaviour {
 	}
 	
 	private class Rover {
-		private List<Action> actions;
+		
+		private List<actionType> actions;
 		private int currentAction;
+		private direction forward;
 		
 		public Rover(){
-			currentAction = 0;	
+			forward = direction.north;
+			actions = new List<actionType>();
+			currentAction = 0;
 		}
 		
-		public Action GetCurrentAction(){
+		public direction GetDirection(){
+			return forward;
+		}
+		
+		public void TurnRight(){
+			switch(forward){
+			case direction.north:
+				forward = direction.east;
+				break;
+			case direction.east:
+				forward = direction.south;
+				break;
+			case direction.west:
+				forward = direction.north;
+				break;
+			case direction.south:
+				forward = direction.west;
+				break;
+			}
+		}
+		
+		public void TurnLeft(){
+			switch(forward){
+			case direction.north:
+				forward = direction.west;
+				break;
+			case direction.east:
+				forward = direction.north;
+				break;
+			case direction.west:
+				forward = direction.south;
+				break;
+			case direction.south:
+				forward = direction.east;
+				break;
+			}
+		}
+		
+		public actionType GetCurrentAction(){
 			return actions[currentAction];
 		}
 		
-		public Action GetNextAction(){
+		public actionType GetNextAction(){
 			int nextAction = currentAction + 1;
 			if(nextAction > actions.Count)
 				nextAction = 0;
@@ -54,7 +99,9 @@ public class BaseScript : MonoBehaviour {
 		}
 		
 		public void AdvanceAction(){
-			currentAction++;	
+			currentAction++;
+			if(currentAction >= actions.Count)
+				currentAction = 0;
 		}
 		
 		public void Reset(){
@@ -66,13 +113,9 @@ public class BaseScript : MonoBehaviour {
 			currentAction = 0;
 		}
 		
-		public void AddAction(Action newAction){
+		public void AddAction(actionType newAction){
 			actions.Add(newAction);
 		}
-	}
-	
-	private class Action {
-		
 	}
 	
 	// Use this for initialization
@@ -80,21 +123,134 @@ public class BaseScript : MonoBehaviour {
 		// Initialize Grid Structure
 		baseGrid = new GridTile[GRID_WIDTH, GRID_HEIGHT];
 		for(int i = 0; i < GRID_WIDTH; i++){
-			for(int j = 0; j < GRID_WIDTH; j++){
+			for(int j = 0; j < GRID_HEIGHT; j++){
 				baseGrid[i, j] = new GridTile(GridTileType.open);
 			}	
 		}
 		
 		// Create Starter Rover
 		Rover newRover = new Rover();
+		newRover.AddAction(actionType.forward);
+		newRover.AddAction(actionType.turnLeft);
+		newRover.AddAction(actionType.forward);
+		newRover.AddAction(actionType.turnRight);
+		newRover.AddAction(actionType.forward);
+		newRover.AddAction(actionType.turnRight);
+		newRover.AddAction(actionType.forward);
+		newRover.AddAction(actionType.turnLeft);
+		newRover.AddAction(actionType.forward);
+		newRover.AddAction(actionType.turnRight);
+		newRover.AddAction(actionType.forward);
+		newRover.AddAction(actionType.turnRight);
+		newRover.AddAction(actionType.forward);
+		newRover.AddAction(actionType.turnLeft);
+		newRover.AddAction(actionType.forward);
+		newRover.AddAction(actionType.turnRight);
+		newRover.AddAction(actionType.forward);
+		newRover.AddAction(actionType.turnRight);
+		newRover.AddAction(actionType.forward);
+		newRover.AddAction(actionType.turnLeft);
+		newRover.AddAction(actionType.forward);
+		newRover.AddAction(actionType.turnRight);
+		newRover.AddAction(actionType.forward);
+		newRover.AddAction(actionType.turnRight);
+		
+		baseGrid[4, 4].SetTileType(GridTileType.rover);
+		baseGrid[4, 4].SetRover(newRover);
+		
+		StartCoroutine("GridClock");
+	}
+	
+	void DrawGame(){
+		// Iterate through the grid
+		for(int j = GRID_HEIGHT - 1; j >= 0; j--){
+			GUILayout.BeginHorizontal();
+			for(int i = 0; i < GRID_WIDTH; i++){
+				switch(baseGrid[i, j].GetTileType()){	
+				case GridTileType.open:
+					GUILayout.Box(GUIContent.none, GUILayout.Width(50), GUILayout.Height(50));
+					break;
+				case GridTileType.rover:
+					GUILayout.Box("test", GUILayout.Width(50), GUILayout.Height(50));
+					//GameObject newRover = Instantiate(roverObj, 
+					break;
+				}
+			}
+			GUILayout.EndHorizontal();
+		}
+	}
+	
+	void MoveTile(GridTile[,] tileGrid, int i, int j, direction forwards){
+		switch(forwards){
+		case direction.north:
+			tileGrid[i, j + 1] = tileGrid[i, j];
+			break;
+		case direction.east:
+			tileGrid[i + 1, j] = tileGrid[i, j];
+			break;
+		case direction.west:
+			tileGrid[i - 1, j] = tileGrid[i, j];
+			break;
+		case direction.south:
+			tileGrid[i, j - 1] = tileGrid[i, j];
+			break;
+		}
+		tileGrid[i, j] = new GridTile(GridTileType.open);
 	}
 	
 	void CalculateMoves () {
-		gameObject.GetComponent<MeshRenderer>();
+		GridTile[,] newBaseGrid = new GridTile[GRID_WIDTH, GRID_HEIGHT];
+		for(int i = 0; i < GRID_WIDTH; i++){
+			for(int j = 0; j < GRID_HEIGHT; j++){
+				newBaseGrid[i, j] = baseGrid[i, j];
+			}	
+		}
+		
+		for(int i = 0; i < GRID_WIDTH; i++){
+			for(int j = 0; j < GRID_HEIGHT; j++){
+				if(baseGrid[i, j].GetTileType() == GridTileType.rover){
+					Rover rover = baseGrid[i, j].GetRover();
+					actionType action = rover.GetCurrentAction();
+					rover.AdvanceAction();
+					direction facing = rover.GetDirection();
+					switch(action){
+					case actionType.forward:
+						MoveTile(newBaseGrid, i, j, facing);
+						break;
+					case actionType.turnRight:
+						rover.TurnRight();
+						break;
+					case actionType.turnLeft:
+						rover.TurnLeft();
+						break;
+					}
+				}
+			}
+		}
+		
+		baseGrid = newBaseGrid;
+	}
+	
+	void OnGUI(){
+		GUILayout.BeginArea(new Rect(20, 45, 680, 550));
+		
+		//GUILayout.Box(GUIContent.none, GUILayout.Width(680), GUILayout.Height(550));
+		DrawGame();
+		
+		GUILayout.EndArea();
+	}
+	
+	IEnumerator GridClock(){
+		while(running){
+		
+			yield return new WaitForSeconds(1f);
+			CalculateMoves();
+		
+		}
 	}
 	
 	// Update is called once per frame
 	void Update () {
-	
+		
 	}
 }
