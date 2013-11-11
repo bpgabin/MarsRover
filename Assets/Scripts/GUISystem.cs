@@ -3,17 +3,56 @@ using System.Collections;
 
 public class GUISystem : MonoBehaviour {
 	
+	// TODO: Remove public textures for GUI and use a GUISkin.
 	public Texture background;
 	public Texture up_arrow;
     public Texture left_arrow;
 	public Texture right_arrow;
 	public Texture pick_up;
     public Texture drop_off;
-	//public GUISkin guiSkin;
+	
+	// TODO: Remove public GUIStyle variables and use a single GUISkin.
 	public GUIStyle tab_buttons;
 	public GUIStyle info_box;
 	
+	private delegate void GUIFunction();
+	private GUIFunction currentMenu;
+	
+	void Start(){
+		currentMenu = GameGUI;	
+	}
+	
 	void OnGUI(){
+		currentMenu();
+	}
+	
+	void MainMenuGUI(){
+		// Title
+		GUILayout.BeginArea(new Rect(Screen.width / 2 - 100, 30, 200, 30));
+		GUILayout.Box("Mars Rover Project");
+		GUILayout.EndArea();
+		
+		// Buttons
+		GUILayout.BeginArea(new Rect(Screen.width / 2 - 50, Screen.height / 2 - 50, 100, 100));
+		if(GUILayout.Button("Start")) currentMenu = GameGUI;
+		if(GUILayout.Button("Credits")) currentMenu = CreditsGUI;
+		GUILayout.EndArea();
+	}
+	
+	void CreditsGUI(){
+		GUILayout.BeginArea(new Rect(Screen.width / 2 - 100, 30, 200, 30));
+		GUILayout.Box("Credits");
+		GUILayout.EndArea();
+		
+		GUILayout.BeginArea(new Rect(Screen.width / 2 - 50, Screen.height / 2 - 50, 100, 110));
+		GUILayout.Box("Brian Gabin");
+		GUILayout.Box("Ruben Telles");
+		GUILayout.Box("Richard Vallejos");
+		if(GUILayout.Button("Return")) currentMenu = MainMenuGUI;
+		GUILayout.EndArea();
+	}
+	
+	void GameGUI(){
 	
 		//GUI.skin = guiSkin;
 		GUI.depth = 3;
@@ -54,7 +93,7 @@ public class GUISystem : MonoBehaviour {
 		GUILayout.EndHorizontal();
 		GUILayout.BeginHorizontal();
 		GUILayout.Button("Main Base");
-		GUILayout.Button("options");
+		GUILayout.Button("Options");
 		GUILayout.EndHorizontal();
 		
 	

@@ -1,132 +1,217 @@
 ﻿using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 
 public class BaseScript : MonoBehaviour {
-	
+	// Textures for the Rover
+	// TODO: Detach rover textures from baseScript.
 	public Texture front;
 	public Texture back;
 	public Texture left;
 	public Texture right;
 	
-	public enum direction { north, east, west, south }
-	private enum actionType { forward, turnRight, turnLeft }
-	private enum GridTileType { rover, wall, drill, processIn, processOut, tram, open }
+	public enum Direction { north, east, west, south }
+	
 	private GridTile[,] baseGrid;
-	private int GRID_HEIGHT = 8;
-	private int GRID_WIDTH = 10;
+	private const int GRID_HEIGHT = 8;
+	private const int GRID_WIDTH = 10;
+	
 	private bool running = false;
 	private Rover selectedRover;
-	private actionType dragAction;
-	private bool dragging = false;
 	
 	private class GridTile {
-		private GridTileType tileType;
-		private Rover rover;
+		// Public Variables
+		public enum TileType { rover, building, wall, open }
 		
-		public GridTile	(GridTileType tileType)	{
-			this.tileType = tileType;
+		// Private variables
+		private TileType m_tileType;
+		private Rover m_rover;
+		private Building m_building;
+		
+		// Public Accessors
+		public TileType tileType{
+			get { return m_tileType; }
+			set {
+				if(m_tileType == TileType.rover && value != TileType.rover)
+					m_rover = null;
+				else if(m_tileType == TileType.building && value != TileType.building)
+					m_building = null;
+				m_tileType = value;
+			}
 		}
 		
-		public void SetTileType (GridTileType tileType) {
-			this.tileType = tileType;	
+		public Rover rover{
+			get { return m_rover; }
+			set {
+				if(m_tileType == TileType.building)
+					building = null;
+				if(m_tileType != TileType.rover && value != null)
+					m_tileType = TileType.rover;
+				m_rover = value;
+			}
 		}
 		
-		public GridTileType GetTileType () {
-			return tileType;
+		public Building building{
+			get { return m_building; }
+			set {
+				if(m_tileType == TileType.rover)
+					rover = null;
+				if(m_tileType != TileType.building && value != null)
+					m_tileType = TileType.building;
+				m_building = value;
+			}
 		}
 		
-		public Rover GetRover () {
-			return rover;	
-		}
-		
-		public void SetRover (Rover rover) {
-			this.rover = rover;	
+		// Constructor
+		public GridTile(TileType type){
+			m_tileType = type;
+			rover = null;
+			building = null;
 		}
 	}
 	
+	private abstract class Building {
+		// Public Variables
+		public enum BuildingType { mine, processingPlant, tramStation }
+		
+		// Protected Variables
+		protected BuildingType bType;
+		
+		// Public Accessors
+		public BuildingType buildingType{
+			get { return bType; }
+			protected set { bType = value; }
+		}
+		
+		// Virtual Functions
+		public virtual bool PickUp(){
+			return false;
+		}
+	}
+	
+	private class MiningBuilding : Building {
+		// New Private Variables
+		private float lastPickup;
+		
+		// Constructor
+		public MiningBuilding(){
+			lastPickup = Time.time;
+			bType = BuildingType.mine;
+		}
+		
+		// Overridden Virtual Function
+		public override bool PickUp(){
+			if(Time.time - lastPickup > 3.0f){
+				lastPickup = Time.time;
+				return true;
+			}
+			else return false;
+		}
+	}
+	
+	// Rover class that tracks rover board piece information.
+	// Includes the action list associated with that rover.
 	private class Rover {
+		// Public Variables
+		public enum ActionType { none, forward, turnRight, turnLeft }
 		
-		private List<actionType> actions;
-		private int currentAction;
-		private direction forward;
+		// Private Variables
+		private int currentActionIndex;
+		private List<ActionType> actionList;
+		private Direction m_direction;
 		
+		// Public Accessors
+		public int actionsSize{
+			get { return actionList.Count; }
+		}
+		
+		public ReadOnlyCollection<ActionType> actions{
+			get { return actionList.AsReadOnly(); }
+		}
+		
+		public ActionType currentAction{
+			get { 
+				if(actionList.Count > 0)
+					return actionList[currentActionIndex];
+				else return ActionType.none;
+			}
+		}
+		
+		public Direction direction{
+			get { return m_direction; }
+		}
+		
+		public ActionType nextAction{
+			get {
+				if(actionList.Count > 0){
+					int nextAction = currentActionIndex + 1;
+					if(nextAction > actionList.Count)
+						nextAction = 0;
+					return actionList[nextAction];
+				}
+				else return ActionType.none;
+			}
+		}
+		
+		// Constructor
 		public Rover(){
-			forward = direction.north;
-			actions = new List<actionType>();
-			currentAction = 0;
-		}
-		
-		public List<actionType> GetActions(){
-			return actions;	
-		}
-		
-		public direction GetDirection(){
-			return forward;
+			m_direction = Direction.north;
+			actionList = new List<ActionType>();
+			currentActionIndex = 0;
 		}
 		
 		public void TurnRight(){
-			switch(forward){
-			case direction.north:
-				forward = direction.east;
+			switch(m_direction){
+			case Direction.north:
+				m_direction = Direction.east;
 				break;
-			case direction.east:
-				forward = direction.south;
+			case Direction.east:
+				m_direction = Direction.south;
 				break;
-			case direction.west:
-				forward = direction.north;
+			case Direction.west:
+				m_direction = Direction.north;
 				break;
-			case direction.south:
-				forward = direction.west;
+			case Direction.south:
+				m_direction = Direction.west;
 				break;
 			}
 		}
 		
 		public void TurnLeft(){
-			switch(forward){
-			case direction.north:
-				forward = direction.west;
+			switch(m_direction){
+			case Direction.north:
+				m_direction = Direction.west;
 				break;
-			case direction.east:
-				forward = direction.north;
+			case Direction.east:
+				m_direction = Direction.north;
 				break;
-			case direction.west:
-				forward = direction.south;
+			case Direction.west:
+				m_direction = Direction.south;
 				break;
-			case direction.south:
-				forward = direction.east;
+			case Direction.south:
+				m_direction = Direction.east;
 				break;
 			}
 		}
 		
-		public actionType GetCurrentAction(){
-			return actions[currentAction];
-		}
-		
-		public actionType GetNextAction(){
-			int nextAction = currentAction + 1;
-			if(nextAction > actions.Count)
-				nextAction = 0;
-			return actions[nextAction];
-		}
-		
 		public void AdvanceAction(){
-			currentAction++;
-			if(currentAction >= actions.Count)
-				currentAction = 0;
+			currentActionIndex++;
+			if(currentActionIndex >= actionList.Count)
+				currentActionIndex = 0;
 		}
 		
 		public void Reset(){
-			currentAction = 0;
+			currentActionIndex = 0;
 		}
 		
 		public void ClearActions(){
-			actions.Clear();
-			currentAction = 0;
+			actionList.Clear();
+			currentActionIndex = 0;
 		}
 		
-		public void AddAction(actionType newAction){
-			actions.Add(newAction);
+		public void AddAction(ActionType newAction){
+			actionList.Add(newAction);
 		}
 	}
 	
@@ -136,16 +221,18 @@ public class BaseScript : MonoBehaviour {
 		baseGrid = new GridTile[GRID_WIDTH, GRID_HEIGHT];
 		for(int i = 0; i < GRID_WIDTH; i++){
 			for(int j = 0; j < GRID_HEIGHT; j++){
-				baseGrid[i, j] = new GridTile(GridTileType.open);
+				baseGrid[i, j] = new GridTile(GridTile.TileType.open);
 			}	
 		}
 		
 		// Create Starter Rover
 		Rover newRover = new Rover();
-		baseGrid[4, 2].SetTileType(GridTileType.rover);
-		baseGrid[4, 2].SetRover(newRover);
+		baseGrid[4, 2].rover = newRover;
 		selectedRover = newRover;
-		//StartCoroutine("GridClock");
+		
+		// Create Starter Building
+		Building newBuilding = new MiningBuilding();
+		PlaceBuilding(newBuilding, 5, 5);
 	}
 	
 	public void DrawGame(){
@@ -153,28 +240,37 @@ public class BaseScript : MonoBehaviour {
 		for(int j = GRID_HEIGHT - 1; j >= 0; j--){
 			GUILayout.BeginHorizontal();
 			for(int i = 0; i < GRID_WIDTH; i++){
-				switch(baseGrid[i, j].GetTileType()){	
-				case GridTileType.open:
+				switch(baseGrid[i, j].tileType){
+				case GridTile.TileType.open:
 					GUILayout.Box(GUIContent.none, GUILayout.Width(64), GUILayout.Height(64));
 					break;
-				case GridTileType.rover:
+				case GridTile.TileType.building:
 					GUILayout.FlexibleSpace();
-					Rover rover = baseGrid[i, j].GetRover();
-					direction facing = rover.GetDirection();
-					switch(facing){
-					case direction.north:
-						GUI.DrawTexture(new Rect(68 * i, 550 - (70 * (j + 1)), 64, 64), back);
+					GUI.Box(new Rect (68 * i, 68 * (GRID_HEIGHT - j - 1), 132, 132), "Mining");
+					break;
+				case GridTile.TileType.wall:
+					GUILayout.FlexibleSpace();
+					break;
+				case GridTile.TileType.rover:
+					GUILayout.FlexibleSpace();
+					Rover rover = baseGrid[i, j].rover;
+					Direction direction = rover.direction;
+					GUI.color = new Color(0.5f, 1.0f, 0.5f, 1.0f);
+					switch(direction){
+					case Direction.north:
+						GUI.DrawTexture(new Rect(68 * i, 68 * (GRID_HEIGHT - j - 1), 64, 64), back);
 						break;
-					case direction.east:
-						GUI.DrawTexture(new Rect(68 * i, 550 - (70 * (j + 1)), 64, 64), right);
+					case Direction.east:
+						GUI.DrawTexture(new Rect(68 * i, 68 * (GRID_HEIGHT - j - 1), 64, 64), right);
 						break;
-					case direction.south:
-						GUI.DrawTexture(new Rect(68 * i, 550 - (70 * (j + 1)), 64, 64), front);
+					case Direction.south:
+						GUI.DrawTexture(new Rect(68 * i, 68 * (GRID_HEIGHT - j - 1), 64, 64), front);
 						break;
-					case direction.west:
-						GUI.DrawTexture(new Rect(68 * i, 550 - (70 * (j + 1)), 64, 64), left);
+					case Direction.west:
+						GUI.DrawTexture(new Rect(68 * i, 568 * (GRID_HEIGHT - j - 1), 64, 64), left);
 						break;
 					}
+					GUI.color = new Color(1f, 1f, 1f, 1f);
 					break;
 				}
 			}
@@ -182,25 +278,33 @@ public class BaseScript : MonoBehaviour {
 		}
 	}
 	
-	void MoveTile(GridTile[,] tileGrid, int i, int j, direction forwards){
-		switch(forwards){
-		case direction.north:
+	void PlaceBuilding(Building building, int x, int y){
+		baseGrid[x, y].building = building;
+		baseGrid[x + 1, y].tileType = GridTile.TileType.wall;
+		baseGrid[x, y - 1].tileType = GridTile.TileType.wall;
+		baseGrid[x + 1, y - 1].tileType = GridTile.TileType.wall;
+	}
+	
+	void MoveTile(GridTile[,] tileGrid, int i, int j, Direction direction){
+		switch(direction){
+		case Direction.north:
 			tileGrid[i, j + 1] = tileGrid[i, j];
 			break;
-		case direction.east:
+		case Direction.east:
 			tileGrid[i + 1, j] = tileGrid[i, j];
 			break;
-		case direction.west:
+		case Direction.west:
 			tileGrid[i - 1, j] = tileGrid[i, j];
 			break;
-		case direction.south:
+		case Direction.south:
 			tileGrid[i, j - 1] = tileGrid[i, j];
 			break;
 		}
-		tileGrid[i, j] = new GridTile(GridTileType.open);
+		tileGrid[i, j] = new GridTile(GridTile.TileType.open);
 	}
 	
 	void CalculateMoves () {
+		// Generate a Copy of baseGrid
 		GridTile[,] newBaseGrid = new GridTile[GRID_WIDTH, GRID_HEIGHT];
 		for(int i = 0; i < GRID_WIDTH; i++){
 			for(int j = 0; j < GRID_HEIGHT; j++){
@@ -208,21 +312,21 @@ public class BaseScript : MonoBehaviour {
 			}	
 		}
 		
+		// Iterate through all the tiles and update the board.
 		for(int i = 0; i < GRID_WIDTH; i++){
 			for(int j = 0; j < GRID_HEIGHT; j++){
-				if(baseGrid[i, j].GetTileType() == GridTileType.rover){
-					Rover rover = baseGrid[i, j].GetRover();
-					actionType action = rover.GetCurrentAction();
+				if(baseGrid[i, j].tileType == GridTile.TileType.rover){
+					Rover rover = baseGrid[i, j].rover;
+					Rover.ActionType action = rover.currentAction;
 					rover.AdvanceAction();
-					direction facing = rover.GetDirection();
 					switch(action){
-					case actionType.forward:
-						MoveTile(newBaseGrid, i, j, facing);
+					case Rover.ActionType.forward:
+						MoveTile(newBaseGrid, i, j, rover.direction);
 						break;
-					case actionType.turnRight:
+					case Rover.ActionType.turnRight:
 						rover.TurnRight();
 						break;
-					case actionType.turnLeft:
+					case Rover.ActionType.turnLeft:
 						rover.TurnLeft();
 						break;
 					}
@@ -234,18 +338,18 @@ public class BaseScript : MonoBehaviour {
 	}
 	
 	void ResetGame(){
-		List<actionType> actions = selectedRover.GetActions();
+		ReadOnlyCollection<Rover.ActionType> actions = selectedRover.actions;
 		
 		for(int i = 0; i < GRID_WIDTH; i++){
 			for(int j = 0; j < GRID_HEIGHT; j++){
-				baseGrid[i, j] = new GridTile(GridTileType.open);
+				baseGrid[i, j] = new GridTile(GridTile.TileType.open);
 			}	
 		}
 		
 		Rover newRover = new Rover();
-		baseGrid[4, 2].SetTileType(GridTileType.rover);
-		baseGrid[4, 2].SetRover(newRover);
-		foreach(actionType action in actions)
+		baseGrid[4, 2].tileType = GridTile.TileType.rover;
+		baseGrid[4, 2].rover = newRover;
+		foreach(Rover.ActionType action in actions)
 			newRover.AddAction(action);
 		selectedRover = newRover;
 	}
@@ -256,10 +360,5 @@ public class BaseScript : MonoBehaviour {
 			CalculateMoves();
 			yield return new WaitForSeconds(1f);
 		}
-	}
-	
-	// Update is called once per frame
-	void Update () {
-		
 	}
 }
