@@ -10,14 +10,17 @@ public class MarsBase {
 	
 	private BaseType bType;
 	private GridTile[,] baseGrid;
-	private const int GRID_HEIGHT = 8;
-	private const int GRID_WIDTH = 10;
+	
+	public const int GRID_HEIGHT = 8;
+	public const int GRID_WIDTH = 10;
 	
 	private bool running = false;
 	private Rover selectedRover;
 	
+	public GridTile[,] board { get { return baseGrid; } }
+	
 	// Classes for board simulation
-	private class GridTile {
+	public class GridTile {
 		// Public Variables
 		public enum TileType { rover, building, wall, open }
 		
@@ -68,7 +71,7 @@ public class MarsBase {
 		}
 	}
 	
-	private abstract class Building {
+	public abstract class Building {
 		// Public Variables
 		public enum BuildingType { mine, processingPlant, tramStation }
 		
@@ -109,7 +112,7 @@ public class MarsBase {
 	
 	// Rover class that tracks rover board piece information.
 	// Includes the action list associated with that rover.
-	private class Rover {
+	public class Rover {
 		// Public Variables
 		public enum ActionType { none, forward, turnRight, turnLeft }
 		
@@ -233,49 +236,6 @@ public class MarsBase {
 		// Create Starter Building
 		Building newBuilding = new MiningBuilding();
 		PlaceBuilding(newBuilding, 5, 5);
-	}
-	
-	public void DrawBase(){
-		// Iterate through the grid
-		for(int j = GRID_HEIGHT - 1; j >= 0; j--){
-			GUILayout.BeginHorizontal();
-			for(int i = 0; i < GRID_WIDTH; i++){
-				switch(baseGrid[i, j].tileType){
-				case GridTile.TileType.open:
-					GUILayout.Box(GUIContent.none, GUILayout.Width(64), GUILayout.Height(64));
-					break;
-				case GridTile.TileType.building:
-					GUILayout.FlexibleSpace();
-					GUI.Box(new Rect (68 * i, 68 * (GRID_HEIGHT - j - 1), 132, 132), "Mining");
-					break;
-				case GridTile.TileType.wall:
-					GUILayout.FlexibleSpace();
-					break;
-				case GridTile.TileType.rover:
-					GUILayout.FlexibleSpace();
-					Rover rover = baseGrid[i, j].rover;
-					Direction direction = rover.direction;
-					if(selectedRover == rover) GUI.color = new Color(0.5f, 1.0f, 0.5f, 1.0f);
-					switch(direction){
-					case Direction.north:
-						GUI.DrawTexture(new Rect(68 * i, 68 * (GRID_HEIGHT - j - 1), 64, 64), Resources.Load("Textures/rover_back_64") as Texture);
-						break;
-					case Direction.east:
-						GUI.DrawTexture(new Rect(68 * i, 68 * (GRID_HEIGHT - j - 1), 64, 64), Resources.Load("Textures/rover_right_64") as Texture);
-						break;
-					case Direction.south:
-						GUI.DrawTexture(new Rect(68 * i, 68 * (GRID_HEIGHT - j - 1), 64, 64), Resources.Load("Textures/rover_front_64") as Texture);
-						break;
-					case Direction.west:
-						GUI.DrawTexture(new Rect(68 * i, 568 * (GRID_HEIGHT - j - 1), 64, 64), Resources.Load("Textures/rover_left_64") as Texture);
-						break;
-					}
-					GUI.color = new Color(1f, 1f, 1f, 1f);
-					break;
-				}
-			}
-			GUILayout.EndHorizontal();
-		}
 	}
 	
 	void PlaceBuilding(Building building, int x, int y){
