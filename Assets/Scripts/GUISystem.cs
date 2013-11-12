@@ -5,7 +5,7 @@ using System.Collections.ObjectModel;
 
 public class GUISystem : MonoBehaviour {
 
-    public enum ButtonType { drill, refinery, arrowUp, arrowLeft, arrowRight, grab, drop }
+    public enum ButtonType { rover, drill, refinery, arrowUp, arrowLeft, arrowRight, grab, drop }
 
     private delegate void GUIFunction();
     private GUIFunction currentGUI;
@@ -33,6 +33,7 @@ public class GUISystem : MonoBehaviour {
         buttonTextures[ButtonType.arrowUp] = Resources.Load("Textures/arrow_icons_up") as Texture;
         buttonTextures[ButtonType.arrowLeft] = Resources.Load("Textures/arrow_icons_left") as Texture;
         buttonTextures[ButtonType.arrowRight] = Resources.Load("Textures/arrow_icons_right") as Texture;
+        buttonTextures[ButtonType.rover] = Resources.Load("Textures/rover_back_64") as Texture;
 
         buttonToAction = new Dictionary<ButtonType, MarsBase.Rover.ActionType>();
         buttonToAction[ButtonType.arrowUp] = MarsBase.Rover.ActionType.forward;
@@ -130,6 +131,9 @@ public class GUISystem : MonoBehaviour {
             foreach (KeyValuePair<ButtonType, Rect> entry in rects) {
                 GUI.Box(entry.Value, buttonStrings[entry.Key]);
             }
+
+            rects[ButtonType.rover] = new Rect(Screen.width - 260 + 250 / 2 - 32, 30 + 264 + 40, 64, 64);
+            GUI.DrawTexture(rects[ButtonType.rover], buttonTextures[ButtonType.rover]);
         }
         else {
             int size = 40, distance = 5, offset = 35, start = 280, yPos = 20;
@@ -220,6 +224,12 @@ public class GUISystem : MonoBehaviour {
                 if (dropRect.Contains(Event.current.mousePosition)) {
                     selectedRover.AddAction(buttonToAction[draggingButton]);
                 }
+            }
+            else {
+                Vector2 pos = Event.current.mousePosition;
+                int x = Mathf.RoundToInt((pos.x - 10) / 68);
+                int y = Mathf.RoundToInt((pos.y - 50) / 68);
+                currentBase.BuyPart(draggingButton, x, MarsBase.GRID_HEIGHT - y);
             }
         }
 

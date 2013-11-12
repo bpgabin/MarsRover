@@ -15,7 +15,6 @@ public class MarsBase {
     public const int GRID_WIDTH = 10;
 
     private bool running = false;
-    private Rover selectedRover;
 
     public GridTile[,] board { get { return baseGrid; } }
 
@@ -228,14 +227,7 @@ public class MarsBase {
         }
 
         // TODO: Remove Starter Assets and Add UI Adding
-        // Create Starter Rover
-        Rover newRover = new Rover();
-        baseGrid[4, 2].rover = newRover;
-        selectedRover = newRover;
-
         // Create Starter Building
-        Building newBuilding = new MiningBuilding();
-        PlaceBuilding(newBuilding, 5, 5);
     }
 
     void PlaceBuilding(Building building, int x, int y) {
@@ -301,20 +293,22 @@ public class MarsBase {
         return false;
     }
 
-    void ResetGame() {
-        ReadOnlyCollection<Rover.ActionType> actions = selectedRover.actions;
+    public void BuyPart(GUISystem.ButtonType buttonType, int x, int y){
+        switch(buttonType) {
+            case GUISystem.ButtonType.rover:
+                baseGrid[x, y].rover = new Rover();
+                break;
+            case GUISystem.ButtonType.drill:
+                PlaceBuilding(new MiningBuilding(), x, y);
+                break;
+            case GUISystem.ButtonType.refinery:
 
-        for (int i = 0; i < GRID_WIDTH; i++) {
-            for (int j = 0; j < GRID_HEIGHT; j++) {
-                baseGrid[i, j] = new GridTile(GridTile.TileType.open);
-            }
+                break;
         }
+    }
 
+    public void BuyRover(int x, int y) {
         Rover newRover = new Rover();
-        baseGrid[4, 2].tileType = GridTile.TileType.rover;
-        baseGrid[4, 2].rover = newRover;
-        foreach (Rover.ActionType action in actions)
-            newRover.AddAction(action);
-        selectedRover = newRover;
+        baseGrid[x, y].rover = newRover;
     }
 }
