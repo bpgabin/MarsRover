@@ -3,16 +3,12 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
-public class BaseScript : MonoBehaviour {
-	// Textures for the Rover
-	// TODO: Detach rover textures from baseScript.
-	public Texture front;
-	public Texture back;
-	public Texture left;
-	public Texture right;
+public class MarsBase {
 	
+	public enum BaseType { mining }
 	public enum Direction { north, east, west, south }
 	
+	private BaseType bType;
 	private GridTile[,] baseGrid;
 	private const int GRID_HEIGHT = 8;
 	private const int GRID_WIDTH = 10;
@@ -20,6 +16,7 @@ public class BaseScript : MonoBehaviour {
 	private bool running = false;
 	private Rover selectedRover;
 	
+	// Classes for board simulation
 	private class GridTile {
 		// Public Variables
 		public enum TileType { rover, building, wall, open }
@@ -215,8 +212,10 @@ public class BaseScript : MonoBehaviour {
 		}
 	}
 	
-	// Use this for initialization
-	void Start () {
+	public MarsBase(BaseType baseType){
+		// Set Base Type
+		bType = baseType;
+	
 		// Initialize Grid Structure
 		baseGrid = new GridTile[GRID_WIDTH, GRID_HEIGHT];
 		for(int i = 0; i < GRID_WIDTH; i++){
@@ -225,6 +224,7 @@ public class BaseScript : MonoBehaviour {
 			}	
 		}
 		
+		// TODO: Remove Starter Assets and Add UI Adding
 		// Create Starter Rover
 		Rover newRover = new Rover();
 		baseGrid[4, 2].rover = newRover;
@@ -235,7 +235,7 @@ public class BaseScript : MonoBehaviour {
 		PlaceBuilding(newBuilding, 5, 5);
 	}
 	
-	public void DrawGame(){
+	public void DrawBase(){
 		// Iterate through the grid
 		for(int j = GRID_HEIGHT - 1; j >= 0; j--){
 			GUILayout.BeginHorizontal();
@@ -255,19 +255,19 @@ public class BaseScript : MonoBehaviour {
 					GUILayout.FlexibleSpace();
 					Rover rover = baseGrid[i, j].rover;
 					Direction direction = rover.direction;
-					GUI.color = new Color(0.5f, 1.0f, 0.5f, 1.0f);
+					if(selectedRover == rover) GUI.color = new Color(0.5f, 1.0f, 0.5f, 1.0f);
 					switch(direction){
 					case Direction.north:
-						GUI.DrawTexture(new Rect(68 * i, 68 * (GRID_HEIGHT - j - 1), 64, 64), back);
+						GUI.DrawTexture(new Rect(68 * i, 68 * (GRID_HEIGHT - j - 1), 64, 64), Resources.Load("Textures/rover_back_64") as Texture);
 						break;
 					case Direction.east:
-						GUI.DrawTexture(new Rect(68 * i, 68 * (GRID_HEIGHT - j - 1), 64, 64), right);
+						GUI.DrawTexture(new Rect(68 * i, 68 * (GRID_HEIGHT - j - 1), 64, 64), Resources.Load("Textures/rover_right_64") as Texture);
 						break;
 					case Direction.south:
-						GUI.DrawTexture(new Rect(68 * i, 68 * (GRID_HEIGHT - j - 1), 64, 64), front);
+						GUI.DrawTexture(new Rect(68 * i, 68 * (GRID_HEIGHT - j - 1), 64, 64), Resources.Load("Textures/rover_front_64") as Texture);
 						break;
 					case Direction.west:
-						GUI.DrawTexture(new Rect(68 * i, 568 * (GRID_HEIGHT - j - 1), 64, 64), left);
+						GUI.DrawTexture(new Rect(68 * i, 568 * (GRID_HEIGHT - j - 1), 64, 64), Resources.Load("Textures/rover_left_64") as Texture);
 						break;
 					}
 					GUI.color = new Color(1f, 1f, 1f, 1f);
