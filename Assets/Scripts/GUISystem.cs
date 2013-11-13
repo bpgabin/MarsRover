@@ -7,6 +7,7 @@ public class GUISystem : MonoBehaviour {
 
     public enum ButtonType { rover, drill, refinery, arrowUp, arrowLeft, arrowRight, grab, drop }
 
+	public GUISkin Ourskin;
     private delegate void GUIFunction();
     private GUIFunction currentGUI;
     private ColonyManager colonyManager;
@@ -53,10 +54,13 @@ public class GUISystem : MonoBehaviour {
     }
 
     void OnGUI() {
+
         currentGUI();
+	
     }
 
     void MainMenuGUI() {
+		GUI.skin = Ourskin;
         GUI.Box(new Rect(Screen.width / 2 - 100, 20, 200, 20), "Space Elevator");
         GUILayout.BeginArea(new Rect(Screen.width / 2 - 50, Screen.height / 2 - 100, 100, 200));
         if (GUILayout.Button("Start")) {
@@ -67,6 +71,7 @@ public class GUISystem : MonoBehaviour {
     }
 
     void ColonyGUI() {
+		GUI.skin = Ourskin;
         GUILayout.BeginVertical();
         GUILayout.BeginHorizontal();
         GUILayout.Box("$" + colonyManager.money);
@@ -103,7 +108,7 @@ public class GUISystem : MonoBehaviour {
 
     void BaseGUI() {
         GUI.depth = 3;
-
+		GUI.skin = Ourskin;
         // Track each interactive button's Rect
         Dictionary<ButtonType, Rect> rects = new Dictionary<ButtonType, Rect>();
         Rect dropRect = new Rect(0, 0, 0, 0);
@@ -112,7 +117,8 @@ public class GUISystem : MonoBehaviour {
         GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Resources.Load("Textures/marsbackground_01") as Texture);
 
         //button tabs at the top showing various info
-        GUILayout.BeginArea(new Rect(10, Screen.height - 590, 200, 200));
+		GUI.Box(new Rect(0, 0, 250, 50), GUIContent.none);
+        GUILayout.BeginArea(new Rect(10, 20, 200, 250));
         GUILayout.BeginHorizontal();
         GUI.enabled = false;
         GUILayout.Button("Revenue");
@@ -123,8 +129,8 @@ public class GUISystem : MonoBehaviour {
         GUILayout.EndArea();
 
         // Context Panel
-        GUI.Box(new Rect(Screen.width - 260, 10, 250, 520), GUIContent.none);
         if (selectedRover == null) {
+			GUI.Box(new Rect(Screen.width - 260, 10, 250, 520), "Buildings");
             rects[ButtonType.drill] = new Rect(Screen.width - 260 + 250 / 2 - 132 / 2, 30, 132, 132);
             rects[ButtonType.refinery] = new Rect(Screen.width - 260 + 250 / 2 - 132 / 2, 30 + 132 + 20, 132, 132);
 
@@ -136,7 +142,8 @@ public class GUISystem : MonoBehaviour {
             GUI.DrawTexture(rects[ButtonType.rover], buttonTextures[ButtonType.rover]);
         }
         else {
-            int size = 40, distance = 5, offset = 35, start = 280, yPos = 20;
+			GUI.Box(new Rect(Screen.width - 260, 10, 250, 520), "Programming");
+            int size = 40, distance = 5, offset = 35, start = 280, yPos = 33;
             rects[ButtonType.arrowUp] = new Rect(Screen.width - start + offset, yPos, size, size);
             rects[ButtonType.arrowLeft] = new Rect(Screen.width - start + offset + size * 1 + distance * 1, yPos, size, size);
             rects[ButtonType.arrowRight] = new Rect(Screen.width - start + offset + size * 2 + distance * 2, yPos, size, size);
@@ -147,10 +154,12 @@ public class GUISystem : MonoBehaviour {
                 GUI.DrawTexture(entry.Value, buttonTextures[entry.Key]);
             }
 
-            dropRect = new Rect(Screen.width - 255, 70, 240, 430);
-            GUI.Box(dropRect, GUIContent.none);
+            dropRect = new Rect(Screen.width - 250, 80, 230, 410);
+			GUI.skin = null;
+			GUI.Box(dropRect, GUIContent.none);
+			GUI.skin = Ourskin;
 
-            GUILayout.BeginArea(new Rect(Screen.width - 235, 504, 200, 40));
+            GUILayout.BeginArea(new Rect(Screen.width - 235, 495, 200, 40));
             GUILayout.BeginHorizontal();
             GUI.enabled = selectedRover.actionsSize > 0;
             if (GUILayout.Button("Test")) {
@@ -165,7 +174,7 @@ public class GUISystem : MonoBehaviour {
 
             if (selectedRover.actionsSize > 0) {
                 ReadOnlyCollection<MarsBase.Rover.ActionType> actions = selectedRover.actions;
-                GUILayout.BeginArea(new Rect(Screen.width - 245, 75, 230, 410));
+                GUILayout.BeginArea(new Rect(Screen.width - 245, 85, 230, 400));
                 if (actions.Count > 45)
                     scrollPosition = GUI.BeginScrollView(new Rect(0, 0, 235, 410), scrollPosition, new Rect(0, 0, 215, 410 + ((actions.Count - 41) / 5) * 45));
                 int colPos = 0;
@@ -246,6 +255,7 @@ public class GUISystem : MonoBehaviour {
     }
 
     void DrawBase() {
+		//GUI.skin = Ourskin;
         Dictionary<Rect, MarsBase.Rover> roverRects = new Dictionary<Rect,MarsBase.Rover>();
 
         GUILayout.BeginArea(new Rect(10, 50, 676, 550));
