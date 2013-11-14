@@ -5,48 +5,54 @@ using System.Collections.Generic;
 
 public class ColonyManager : MonoBehaviour {
 
-    private Dictionary<MarsBase.BaseType, MarsBase> m_bases;
+    // Public Variables
+    public enum ShopItems { miningBase }
+
+    private List<MarsBase> m_bases;
 
     // Resource Tracking Variables
     private int m_money;
     private int m_iron;
-    private bool running = false;
-
-    private Dictionary<MarsBase.BaseType, int> m_costs;
+    private bool m_running = false;
+    private Dictionary<ShopItems, int> m_costs;
 
 
     // Accessors
     public int iron { get { return m_iron; } }
     public int money { get { return m_money; } }
-    public Dictionary<MarsBase.BaseType, MarsBase> bases { get { return m_bases; } }
-    public Dictionary<MarsBase.BaseType, int> costs { get { return m_costs; } }
+    public bool running { get { return m_running; } }
+    public List<MarsBase> bases { get { return m_bases; } }
+    public Dictionary<ShopItems, int> costs { get { return m_costs; } }
 
     // Use this for initialization
     void Start() {
-        m_bases = new Dictionary<MarsBase.BaseType, MarsBase>();
+        m_bases = new List<MarsBase>();
         m_money = 100;
         m_iron = 0;
-
-        m_costs = new Dictionary<MarsBase.BaseType, int>();
-        m_costs.Add(MarsBase.BaseType.mining, 50);
+        m_costs = new Dictionary<ShopItems, int>();
+        m_costs.Add(ShopItems.miningBase, 50);
     }
 
-    // Update is called once per frame
-    void Update() {
-
+    public void AddBase() {
+        m_bases.Add(new MarsBase());
+        m_money -= m_costs[ShopItems.miningBase];
     }
 
-    public void AddBase(MarsBase.BaseType baseType) {
-        m_bases[baseType] = new MarsBase(baseType);
-        m_money -= m_costs[baseType];
+    public void StartSim() {
+        m_running = true;
+        StartCoroutine("GridClock");
+    }
+
+    public void StopSim() {
+        m_running = false;
     }
 
     IEnumerator GridClock() {
         yield return new WaitForSeconds(1f);
-        while (running) {
-            foreach (KeyValuePair<MarsBase.BaseType, MarsBase> entry in m_bases) {
-                running = entry.Value.CalculateMoves();
-
+        while (m_running) {
+            foreach (MarsBase mBase in m_bases) {
+                if (mBase.running)
+                    mBase.CalculateMoves();
             }
             yield return new WaitForSeconds(1f);
         }
