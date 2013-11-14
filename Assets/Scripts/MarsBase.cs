@@ -14,8 +14,6 @@ public class MarsBase {
     public const int GRID_HEIGHT = 8;
     public const int GRID_WIDTH = 10;
 
-    private bool running = false;
-
     public GridTile[,] board { get { return baseGrid; } }
 
     // Classes for board simulation
@@ -212,6 +210,10 @@ public class MarsBase {
         public void AddAction(ActionType newAction) {
             actionList.Add(newAction);
         }
+
+        public void RemoveAction(int index) {
+            actionList.RemoveAt(index);
+        }
     }
 
     public MarsBase(BaseType baseType) {
@@ -237,25 +239,40 @@ public class MarsBase {
         baseGrid[x + 1, y - 1].tileType = GridTile.TileType.wall;
     }
 
-    void MoveTile(GridTile[,] tileGrid, int i, int j, Direction direction) {
+    bool MoveTile(GridTile[,] tileGrid, int i, int j, Direction direction) {
         switch (direction) {
             case Direction.north:
-                tileGrid[i, j + 1] = tileGrid[i, j];
+                if (tileGrid[i, j + 1].tileType == GridTile.TileType.open)
+                    tileGrid[i, j + 1] = tileGrid[i, j];
+                else
+                    return false;
                 break;
             case Direction.east:
-                tileGrid[i + 1, j] = tileGrid[i, j];
+                if (tileGrid[i + 1, j].tileType == GridTile.TileType.open)
+                    tileGrid[i + 1, j] = tileGrid[i, j];
+                else
+                    return false;
                 break;
             case Direction.west:
-                tileGrid[i - 1, j] = tileGrid[i, j];
+                if (tileGrid[i - 1, j].tileType == GridTile.TileType.open)
+                    tileGrid[i - 1, j] = tileGrid[i, j];
+                else
+                    return false;
                 break;
             case Direction.south:
-                tileGrid[i, j - 1] = tileGrid[i, j];
+                if (tileGrid[i, j - 1].tileType == GridTile.TileType.open)
+                    tileGrid[i, j - 1] = tileGrid[i, j];
+                else
+                    return false;
                 break;
         }
         tileGrid[i, j] = new GridTile(GridTile.TileType.open);
+        return true;
     }
 
-    public void CalculateMoves() {
+    public bool CalculateMoves() {
+        bool errorsDetected = false;
+
         // Generate a Copy of baseGrid
         GridTile[,] newBaseGrid = new GridTile[GRID_WIDTH, GRID_HEIGHT];
         for (int i = 0; i < GRID_WIDTH; i++) {
@@ -273,7 +290,9 @@ public class MarsBase {
                     rover.AdvanceAction();
                     switch (action) {
                         case Rover.ActionType.forward:
-                            MoveTile(newBaseGrid, i, j, rover.direction);
+                            if (!MoveTile(newBaseGrid, i, j, rover.direction)) {
+                                errorsDetected = true;
+                            }
                             break;
                         case Rover.ActionType.turnRight:
                             rover.TurnRight();
@@ -281,12 +300,19 @@ public class MarsBase {
                         case Rover.ActionType.turnLeft:
                             rover.TurnLeft();
                             break;
+                        case Rover.ActionType.grab:
+                            
+                            break;
+                        case Rover.ActionType.drop:
+                            
+                            break;
                     }
                 }
             }
         }
 
         baseGrid = newBaseGrid;
+        return errorsDetected;
     }
 
     public bool TestRover(Rover rover) {

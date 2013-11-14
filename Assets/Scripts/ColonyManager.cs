@@ -41,16 +41,12 @@ public class ColonyManager : MonoBehaviour {
         m_money -= m_costs[baseType];
     }
 
-    public void StartSim() {
-        running = true;
-        StartCoroutine("GridClock");
-    }
-
     IEnumerator GridClock() {
         yield return new WaitForSeconds(1f);
         while (running) {
             foreach (KeyValuePair<MarsBase.BaseType, MarsBase> entry in m_bases) {
-                entry.Value.CalculateMoves();
+                running = entry.Value.CalculateMoves();
+
             }
             yield return new WaitForSeconds(1f);
         }
