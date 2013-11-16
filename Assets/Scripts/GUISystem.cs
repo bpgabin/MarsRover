@@ -53,9 +53,7 @@ public class GUISystem : MonoBehaviour {
     }
 
     void OnGUI() {
-
         currentGUI();
-
     }
 
     void MainMenuGUI() {
@@ -341,7 +339,14 @@ public class GUISystem : MonoBehaviour {
                         GUI.skin = Ourskin;
                         break;
                     case MarsBase.GridTile.TileType.building:
-                        GUILayout.FlexibleSpace();
+                        if (currentBase.board[i, j].building.buildingType == MarsBase.Building.BuildingType.mine) {
+                            GUILayout.Box("Drill", GUILayout.Width(64), GUILayout.Height(64));
+                        }
+                        else {
+                            GUILayout.Box("Refinery", GUILayout.Width(64), GUILayout.Height(64));
+                        }
+                        break;    
+                    /*GUILayout.FlexibleSpace();
                         GUI.skin = null;
                         GUI.color = new Color(1.0f, 1.0f, 1.0f, 0.5f);
                         GUI.Box(new Rect(68 * i, 68 * (MarsBase.GRID_HEIGHT - j - 1), 132, 132), GUIContent.none);
@@ -349,8 +354,10 @@ public class GUISystem : MonoBehaviour {
                         GUI.skin = Ourskin;
                         GUI.DrawTexture(new Rect(68 * i, 68 * (MarsBase.GRID_HEIGHT - j - 1) + 25, 132, 84.857f), buttonTextures[ButtonType.drill]);
                         break;
+                         */
                     case MarsBase.GridTile.TileType.wall:
-                        GUILayout.FlexibleSpace();
+                        GUILayout.Box("Wall", GUILayout.Width(64), GUILayout.Height(64));    
+                    //GUILayout.FlexibleSpace();
                         break;
                     case MarsBase.GridTile.TileType.rover:
                         MarsBase.Rover rover = currentBase.board[i, j].rover;
@@ -365,7 +372,8 @@ public class GUISystem : MonoBehaviour {
                         Rect newRoverRect = new Rect(68 * i, 68 * (MarsBase.GRID_HEIGHT - j - 1), 64, 64);
                         Rect newScreenRect = new Rect(68 * i + 10, 68 * (MarsBase.GRID_HEIGHT - j - 1) + 50, 64, 64);
                         roverRects[newScreenRect] = rover;
-                        if (rover.crashed) GUI.color = Color.red;
+                        if (rover.resource != MarsBase.ResourceType.none) GUI.color = Color.cyan;
+                        else if (rover.crashed) GUI.color = Color.red;
                         switch (direction) {
                             case MarsBase.Direction.north:
                                 GUI.DrawTexture(newRoverRect, Resources.Load("Textures/rover_back_64") as Texture);

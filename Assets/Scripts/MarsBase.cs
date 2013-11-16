@@ -83,31 +83,53 @@ public class MarsBase {
             protected set { bType = value; }
         }
 
-        // Virtual Functions
-        public virtual bool PickUp() {
-            return false;
-        }
+        // Abstract Functions
+        public abstract ResourceType PickUp(Direction direction);
+        public virtual bool DropOff(ResourceType rType, Direction direction) { return false; }
     }
 
     private class MiningBuilding : Building {
-        // New Private Variables
-        private float lastPickup;
-
         // Constructor
         public MiningBuilding() {
-            lastPickup = Time.time;
             bType = BuildingType.mine;
         }
 
         // Overridden Virtual Function
-        public override bool PickUp() {
-            if (Time.time - lastPickup > 3.0f) {
-                lastPickup = Time.time;
-                return true;
-            }
-            else return false;
+        public override ResourceType PickUp(Direction direction) {
+            return ResourceType.rawIron;
         }
     }
+
+    private class RefineryBuilding : Building {
+        private float dropTime;
+        private float processTime = 1.0f;
+
+        public RefineryBuilding() {
+            dropTime = -1;
+            bType = BuildingType.processingPlant;
+        }
+
+        public override ResourceType PickUp(Direction direction) {
+            if (direction == Direction.west) {
+                if (Time.time - dropTime >= processTime) {
+                    return ResourceType.refinedIron;
+                }
+            }
+            return ResourceType.none;
+        }
+
+        public override bool DropOff(ResourceType rType, Direction direction) {
+            if (direction == Direction.east) {
+                if (rType == ResourceType.rawIron) {
+                    dropTime = Time.time;
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+
+    public enum ResourceType { rawIron, refinedIron, none }
 
     // Rover class that tracks rover board piece information.
     // Includes the action list associated with that rover.
@@ -121,6 +143,7 @@ public class MarsBase {
         private Direction m_direction;
         private bool m_crashed = false;
         private Vector2 m_startPos;
+        private ResourceType m_resource;
 
         // Public Accessors
         public int actionsSize { get { return actionList.Count; } }
@@ -133,6 +156,11 @@ public class MarsBase {
         public Vector2 startPos { get { return m_startPos; } }
 
         public ReadOnlyCollection<ActionType> actions { get { return actionList.AsReadOnly(); } }
+
+        public ResourceType resource {
+            get { return m_resource; }
+            set { m_resource = value; }
+        }
 
         public ActionType currentAction {
             get {
@@ -164,6 +192,7 @@ public class MarsBase {
             m_direction = Direction.north;
             actionList = new List<ActionType>();
             m_currentActionIndex = 0;
+            m_resource = ResourceType.none;
         }
 
         public void TurnRight() {
@@ -206,10 +235,6 @@ public class MarsBase {
                 m_currentActionIndex = 0;
         }
 
-        public void Reset() {
-            m_currentActionIndex = 0;
-        }
-
         public void ClearActions() {
             actionList.Clear();
             m_currentActionIndex = 0;
@@ -219,6 +244,7 @@ public class MarsBase {
             m_currentActionIndex = 0;
             m_crashed = false;
             m_direction = Direction.north;
+            m_resource = ResourceType.none;
         }
 
         public void AddAction(ActionType newAction) {
@@ -240,11 +266,19 @@ public class MarsBase {
         }
     }
 
-    void PlaceBuilding(Building building, int x, int y) {
-        baseGrid[x, y].building = building;
+    void PlaceDrill(int x, int y) {
+        baseGrid[x + 1, y - 1].building = new MiningBuilding();
         baseGrid[x + 1, y].tileType = GridTile.TileType.wall;
         baseGrid[x, y - 1].tileType = GridTile.TileType.wall;
-        baseGrid[x + 1, y - 1].tileType = GridTile.TileType.wall;
+        baseGrid[x, y].tileType = GridTile.TileType.wall;
+    }
+
+    void PlaceRefinery(int x, int y) {
+        RefineryBuilding building = new RefineryBuilding();
+        baseGrid[x, y].tileType = GridTile.TileType.wall;
+        baseGrid[x + 1, y].tileType = GridTile.TileType.wall;
+        baseGrid[x, y - 1].building = building;
+        baseGrid[x + 1, y - 1].building = building;
     }
 
     public void StartSim() {
@@ -330,6 +364,68 @@ public class MarsBase {
         else tileGrid[i, j] = new GridTile(GridTile.TileType.open);
     }
 
+    void GrabTile(int i, int j) {
+        Rover rover = baseGrid[i, j].rover;
+        Direction direction = rover.direction;
+        switch (direction) {
+            case Direction.north:
+                break;
+            case Direction.east:
+                if (baseGrid[i + 1, j].tileType == GridTile.TileType.building) {
+                    ResourceType resource = baseGrid[i + 1, j].building.PickUp(direction);
+                    if (resource != ResourceType.none) {
+                        rover.resource = resource;
+                    }
+                }
+                break;
+            case Direction.west:
+                if (baseGrid[i - 1, j].tileType == GridTile.TileType.building) {
+                    ResourceType resource = baseGrid[i - 1, j].building.PickUp(direction);
+                    if (resource != ResourceType.none) {
+                        rover.resource = resource;
+                    }
+                }
+                break;
+            case Direction.south:
+                break;
+        }
+    }
+
+    void DropTile(int i, int j) {
+        Rover rover = baseGrid[i, j].rover;
+        Direction direction = rover.direction;
+        switch (direction) {
+            case Direction.north:
+                if (baseGrid[i, j + 1].tileType == GridTile.TileType.building) {
+                    if (baseGrid[i, j + 1].building.DropOff(rover.resource, direction)) {
+                        rover.resource = ResourceType.none;
+                    }
+                }
+                break;
+            case Direction.east:
+                if (baseGrid[i + 1, j].tileType == GridTile.TileType.building) {
+                    if (baseGrid[i + 1, j].building.DropOff(rover.resource, direction)) {
+                        rover.resource = ResourceType.none;
+                    }
+                }
+                break;
+            case Direction.west:
+                if (baseGrid[i - 1, j].tileType == GridTile.TileType.building) {
+                    if (baseGrid[i - i, j].building.DropOff(rover.resource, direction)) {
+                        rover.resource = ResourceType.none;
+                    }
+                }
+                break;
+            case Direction.south:
+                if (baseGrid[i, j - 1].tileType == GridTile.TileType.building) {
+                    if (baseGrid[i, j - 1].building.DropOff(rover.resource, direction)) {
+                        rover.resource = ResourceType.none;
+                    }
+                }
+                break;
+        }
+    }
+
     public void CalculateMoves() {
         // Generate a Copy of baseGrid
         GridTile[,] newBaseGrid = new GridTile[GRID_WIDTH, GRID_HEIGHT];
@@ -356,10 +452,10 @@ public class MarsBase {
                             rover.TurnLeft();
                             break;
                         case Rover.ActionType.grab:
-
+                            if (rover.resource == ResourceType.none) GrabTile(i, j);
                             break;
                         case Rover.ActionType.drop:
-
+                            if (rover.resource != ResourceType.none) DropTile(i, j);
                             break;
                     }
                     if (m_running) rover.AdvanceAction();
@@ -376,10 +472,10 @@ public class MarsBase {
                 baseGrid[x, y].rover = new Rover(x, y);
                 break;
             case GUISystem.ButtonType.drill:
-                PlaceBuilding(new MiningBuilding(), x, y);
+                PlaceDrill(x, y);
                 break;
             case GUISystem.ButtonType.refinery:
-
+                PlaceRefinery(x, y);
                 break;
         }
     }
