@@ -62,7 +62,7 @@ public class GUISystem : MonoBehaviour {
         GUI.skin = Ourskin;
 
         // Draw Background
-        GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Resources.Load("Textures/marsbackground_01") as Texture);
+        //GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Resources.Load("Textures/marsbackground_01") as Texture);
 
         GUI.Box(new Rect(Screen.width / 2 - 100, 20, 200, 20), "Space Elevator");
         GUILayout.BeginArea(new Rect(Screen.width / 2 - 50, Screen.height / 2 - 100, 100, 200));
