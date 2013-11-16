@@ -351,8 +351,11 @@ public class GUISystem : MonoBehaviour {
                         if (currentBase.board[i, j].building.buildingType == MarsBase.Building.BuildingType.mine) {
                             GUILayout.Box("Drill", GUILayout.Width(64), GUILayout.Height(64));
                         }
-                        else {
+                        else if(currentBase.board[i, j].building.buildingType == MarsBase.Building.BuildingType.processingPlant) {
                             GUILayout.Box("Refinery", GUILayout.Width(64), GUILayout.Height(64));
+                        }
+                        else {
+                            GUILayout.Box("Tram", GUILayout.Width(64), GUILayout.Height(64));
                         }
                         break;    
                     /*GUILayout.FlexibleSpace();
