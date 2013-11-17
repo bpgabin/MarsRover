@@ -5,19 +5,25 @@ using System.Collections.ObjectModel;
 
 public class MarsBase {
     public enum Direction { north, east, west, south }
-    public enum ResourceType { rawIron, refinedIron, none }
+    public enum ResourceType { rawIron, refinedIron, doubleRawIron, doubleRefinedIron, none }
+    public enum BaseNumber { baseOne, baseTwo, baseThree, baseFour, baseFive }
+
+    public delegate void TramLaunchedDelegate(List<ResourceType> resources);
+    public TramLaunchedDelegate tramLaunchedFunction;
 
     private GridTile[,] baseGrid;
     private bool m_running = false;
     private bool m_crashed = false;
+    private BaseNumber m_baseNumber;
 
-    public const int GRID_HEIGHT = 8;
-    public const int GRID_WIDTH = 10;
+    public const int GRID_HEIGHT = 14;
+    public const int GRID_WIDTH = 18;
     public Rover selectedRover;
 
     public GridTile[,] board { get { return baseGrid; } }
     public bool running { get { return m_running; } }
     public bool crashed { get { return m_crashed; } }
+    public BaseNumber baseNumber { get { return m_baseNumber; } }
 
     // Classes for board simulation
     public class GridTile {
@@ -88,14 +94,18 @@ public class MarsBase {
         public abstract ResourceType PickUp(Direction direction);
         public virtual bool DropOff(ResourceType rType, Direction direction) { return false; }
         public abstract void Reset();
+        public virtual void Update() { return; }
     }
 
     private class TramBuilding : Building {
-        private List<ResourceType> storedResources;
+        public List<ResourceType> storedResources;
+        public bool docked = true;
+        private TramLaunchedDelegate tramLaunchedFunction;
 
-        public TramBuilding() {
+        public TramBuilding(TramLaunchedDelegate tramFunction) {
             storedResources = new List<ResourceType>();
             bType = BuildingType.tramStation;
+            tramLaunchedFunction = tramFunction;
         }
 
         public override ResourceType PickUp(Direction direction) {
@@ -103,10 +113,12 @@ public class MarsBase {
         }
 
         public override bool DropOff(ResourceType rType, Direction direction) {
-            if (direction == Direction.south) {
-                if (rType == ResourceType.refinedIron) {
-                    storedResources.Add(rType);
-                    return true;
+            if (docked) {
+                if (direction == Direction.south) {
+                    if (rType == ResourceType.refinedIron) {
+                        storedResources.Add(rType);
+                        return true;
+                    }
                 }
             }
             return false;
@@ -114,6 +126,13 @@ public class MarsBase {
 
         public override void Reset() {
             storedResources.Clear();
+        }
+
+        public override void Update() {
+            if (storedResources.Count >= 5) {
+                //docked = false;
+                tramLaunchedFunction(storedResources);
+            }
         }
     }
 
@@ -134,23 +153,20 @@ public class MarsBase {
     }
 
     private class RefineryBuilding : Building {
-        private float dropTime = -1;
+        private List<int> processTimes;
         private int processedIron = 0;
-        private float processTime = 1.0f;
+        private int processTime = 3;
 
         public RefineryBuilding() {
+            processTimes = new List<int>();
             bType = BuildingType.processingPlant;
         }
 
         public override ResourceType PickUp(Direction direction) {
-            if (dropTime != -1) {
-                if (processedIron > 0) {
-                    if (direction == Direction.west) {
-                        if (Time.time - dropTime >= processTime) {
-                            processedIron--;
-                            return ResourceType.refinedIron;
-                        }
-                    }
+            if (processedIron > 0) {
+                if (direction == Direction.west) {
+                    processedIron--;
+                    return ResourceType.refinedIron;
                 }
             }
             return ResourceType.none;
@@ -159,16 +175,25 @@ public class MarsBase {
         public override bool DropOff(ResourceType rType, Direction direction) {
             if (direction == Direction.east) {
                 if (rType == ResourceType.rawIron) {
-                    dropTime = Time.time;
-                    processedIron++;
+                    processTimes.Add(processTime);
                     return true;
                 }
             }
             return false;
         }
 
+        public override void Update() {
+            for (int i = 0; i < processTimes.Count; i++) {
+                processTimes[i]--;
+                if (processTimes[i] == 0) {
+                    processTimes.RemoveAt(i);
+                    processedIron++;
+                }
+            }
+        }
+
         public override void Reset() {
-            dropTime = -1;
+            processTimes.Clear();
             processedIron = 0;
         }
     }
@@ -298,7 +323,9 @@ public class MarsBase {
         }
     }
 
-    public MarsBase() {
+    public MarsBase(TramLaunchedDelegate tramFunction) {
+        tramLaunchedFunction = tramFunction;
+
         // Initialize Grid Structure
         baseGrid = new GridTile[GRID_WIDTH, GRID_HEIGHT];
         for (int i = 0; i < GRID_WIDTH; i++) {
@@ -308,7 +335,7 @@ public class MarsBase {
         }
 
         // Add Tram Station
-        baseGrid[GRID_WIDTH - 2, 0].building = new TramBuilding();
+        baseGrid[GRID_WIDTH - 2, 0].building = new TramBuilding(tramLaunchedFunction);
         baseGrid[GRID_WIDTH - 1, 0].tileType = GridTile.TileType.wall;
     }
 
@@ -531,6 +558,9 @@ public class MarsBase {
                             break;
                     }
                     if (m_running) rover.AdvanceAction();
+                }
+                else if (baseGrid[i, j].tileType == GridTile.TileType.building) {
+                    baseGrid[i, j].building.Update();
                 }
             }
         }

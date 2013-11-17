@@ -30,7 +30,7 @@ public class GUISystem : MonoBehaviour {
         buttonTextures[ButtonType.arrowUp] = Resources.Load("Textures/forwardIcon") as Texture;
         buttonTextures[ButtonType.arrowLeft] = Resources.Load("Textures/rotateLeftIcon") as Texture;
         buttonTextures[ButtonType.arrowRight] = Resources.Load("Textures/rotateRightIcon") as Texture;
-        buttonTextures[ButtonType.rover] = Resources.Load("Textures/rover_back_64") as Texture;
+        buttonTextures[ButtonType.rover] = Resources.Load("Textures/rover") as Texture;
         buttonTextures[ButtonType.drill] = Resources.Load("Textures/bucketwheelexcavator_small") as Texture;
         buttonTextures[ButtonType.refinery] = Resources.Load("Textures/refinery_small") as Texture;
 
@@ -67,11 +67,7 @@ public class GUISystem : MonoBehaviour {
 
     void MainMenuGUI() {
         GUI.skin = Ourskin;
-
-        // Draw Background
-        //GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Resources.Load("Textures/marsbackground_01") as Texture);
-
-		GUI.DrawTexture(new Rect(Screen.width / 2 - 195, 100, 393, 183), Resources.Load("Textures/redrover") as Texture);
+		GUI.DrawTexture(new Rect(Screen.width / 2 - 176, 100, 352, 148), Resources.Load("Textures/redrover") as Texture);
         GUILayout.BeginArea(new Rect(Screen.width / 2 - 50, Screen.height / 2 + 50 , 100, 200));
         if (GUILayout.Button("Start")) {
             colonyManager = gameObject.AddComponent<ColonyManager>();
@@ -89,17 +85,10 @@ public class GUISystem : MonoBehaviour {
 
         GUILayout.BeginVertical();
         GUILayout.BeginHorizontal();
-        GUILayout.Box("$" + colonyManager.money);
         GUILayout.Box("Iron: " + colonyManager.iron);
+        GUILayout.Box("Money: " + colonyManager.money);
         GUILayout.EndHorizontal();
         GUILayout.BeginHorizontal();
-
-        // Trade Button
-        GUI.enabled = false;
-        if (GUILayout.Button("Trade", GUILayout.Width(50))) {
-
-        }
-        GUI.enabled = true;
 
         // Temporary Build Button
         // TODO: Remove temporary build button when no longer needed.
@@ -145,17 +134,24 @@ public class GUISystem : MonoBehaviour {
         // Draw Background
         GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Resources.Load("Textures/marsbackground_01") as Texture);
 
-        // Button tabs at the top showing various info
-        GUI.Box(new Rect(0, 0, 250, 50), GUIContent.none);
-        GUILayout.BeginArea(new Rect(10, 20, 200, 250));
+        // Tabs at the top showing various info
+        GUI.Box(new Rect(2, 2, 240, 40), GUIContent.none);
+        GUILayout.BeginArea(new Rect(20, 14, 220, 40));
         GUILayout.BeginHorizontal();
-        GUI.enabled = false;
-        GUILayout.Button("Revenue");
-        GUILayout.Button("Resources");
-        GUILayout.Button("Repairs");
-        GUI.enabled = true;
+        GUILayout.Label("IRON: " + colonyManager.iron.ToString());
+        GUILayout.Label("MONEY: $" + colonyManager.money.ToString());
         GUILayout.EndHorizontal();
         GUILayout.EndArea();
+
+        GUI.Box(new Rect(255, 0, 120, 30), GUIContent.none);
+        GUI.color = Color.Lerp(Color.red, Color.green, (colonyManager.currentSpaceElevatorTime / colonyManager.spaceElevatorTime));
+        GUI.Box(new Rect(260, 10, (colonyManager.currentSpaceElevatorTime / colonyManager.spaceElevatorTime) * 100, 20), GUIContent.none, "ProgressBar");
+        GUI.color = Color.white;
+        GUI.Label(new Rect(260 + 50 - 60, 20, 120, 40), colonyManager.currentSpaceElevatorTime.ToString());
+
+        GUI.color = Color.Lerp(Color.red, Color.green, (colonyManager.currentAuditTime / colonyManager.auditTime));
+        GUI.Box(new Rect(370, 10, (colonyManager.currentAuditTime / colonyManager.auditTime) * 100, 20), GUIContent.none, "ProgressBar");
+        GUI.color = Color.white;
 
         GUILayout.BeginArea(new Rect(Screen.width / 2 - 50, 15, 100, 40));
         GUILayout.BeginHorizontal();
@@ -189,7 +185,7 @@ public class GUISystem : MonoBehaviour {
             GUI.Box(new Rect(Screen.width - 260, 10, 250, 520), "Buildings");
             rects[ButtonType.drill] = new Rect(Screen.width - 260 + 250 / 2 - 132 / 2, 30, 128, 82.286f);
             rects[ButtonType.refinery] = new Rect(Screen.width - 260 + 250 / 2 - 132 / 2, 30 + 132 + 20, 112, 80);
-            rects[ButtonType.rover] = new Rect(Screen.width - 260 + 250 / 2 - 32, 30 + 264 + 40, 64, 64);
+            rects[ButtonType.rover] = new Rect(Screen.width - 260 + 250 / 2 - 16, 30 + 264 + 40, 32, 32);
 
             foreach (KeyValuePair<ButtonType, Rect> entry in rects) {
                 GUI.DrawTexture(entry.Value, buttonTextures[entry.Key]);
@@ -311,8 +307,8 @@ public class GUISystem : MonoBehaviour {
                     }
                     else {
                         Vector2 pos = Event.current.mousePosition;
-                        int x = Mathf.RoundToInt((pos.x - 10) / 68);
-                        int y = Mathf.RoundToInt((pos.y - 50) / 68);
+                        int x = Mathf.RoundToInt((pos.x - 10) / 36);
+                        int y = Mathf.RoundToInt((pos.y - 50) / 36);
                         if (x >= 0 && x < MarsBase.GRID_WIDTH && y >= 0 && y < MarsBase.GRID_HEIGHT)
                             currentBase.BuyPart(draggingButton, x, MarsBase.GRID_HEIGHT - y);
                     }
@@ -343,19 +339,19 @@ public class GUISystem : MonoBehaviour {
                         //if (selectedRover == null) GUILayout.FlexibleSpace();
                         GUI.skin = null;
                         GUI.color = new Color(1.0f, 1.0f, 1.0f, 0.5f);
-                        GUILayout.Box(GUIContent.none, GUILayout.Width(64), GUILayout.Height(64));
+                        GUILayout.Box(GUIContent.none, GUILayout.Width(32), GUILayout.Height(32));
                         GUI.color = Color.white;
                         GUI.skin = Ourskin;
                         break;
                     case MarsBase.GridTile.TileType.building:
                         if (currentBase.board[i, j].building.buildingType == MarsBase.Building.BuildingType.mine) {
-                            GUILayout.Box("Drill", GUILayout.Width(64), GUILayout.Height(64));
+                            GUILayout.Box("Drill", GUILayout.Width(32), GUILayout.Height(32));
                         }
                         else if(currentBase.board[i, j].building.buildingType == MarsBase.Building.BuildingType.processingPlant) {
-                            GUILayout.Box("Refinery", GUILayout.Width(64), GUILayout.Height(64));
+                            GUILayout.Box("Refinery", GUILayout.Width(32), GUILayout.Height(32));
                         }
                         else {
-                            GUILayout.Box("Tram", GUILayout.Width(64), GUILayout.Height(64));
+                            GUILayout.Box("Tram", GUILayout.Width(32), GUILayout.Height(32));
                         }
                         break;    
                     /*GUILayout.FlexibleSpace();
@@ -368,7 +364,7 @@ public class GUISystem : MonoBehaviour {
                         break;
                          */
                     case MarsBase.GridTile.TileType.wall:
-                        GUILayout.Box("Wall", GUILayout.Width(64), GUILayout.Height(64));    
+                        GUILayout.Box("Wall", GUILayout.Width(32), GUILayout.Height(32));    
                     //GUILayout.FlexibleSpace();
                         break;
                     case MarsBase.GridTile.TileType.rover:
@@ -377,30 +373,45 @@ public class GUISystem : MonoBehaviour {
 
                         GUI.skin = null;
                         if (currentBase.selectedRover != rover) GUI.color = new Color(0f, 1f, 0f, 0.5f);
-                        GUILayout.Box(GUIContent.none, GUILayout.Width(64), GUILayout.Height(64));
+                        GUILayout.Box(GUIContent.none, GUILayout.Width(32), GUILayout.Height(32));
                         GUI.color = Color.white;
                         GUI.skin = Ourskin;
 
-                        Rect newRoverRect = new Rect(68 * i, 68 * (MarsBase.GRID_HEIGHT - j - 1), 64, 64);
-                        Rect newScreenRect = new Rect(68 * i + 10, 68 * (MarsBase.GRID_HEIGHT - j - 1) + 50, 64, 64);
+                        Rect newRoverRect = new Rect(36 * i, 36 * (MarsBase.GRID_HEIGHT - j - 1), 32, 32);
+                        Rect newScreenRect = new Rect(36 * i + 10, 36 * (MarsBase.GRID_HEIGHT - j - 1) + 50, 32, 32);
                         roverRects[newScreenRect] = rover;
-                        if (rover.resource != MarsBase.ResourceType.none) GUI.color = Color.cyan;
-                        else if (rover.crashed) GUI.color = Color.red;
+                        if (rover.crashed) GUI.color = Color.red;
                         switch (direction) {
                             case MarsBase.Direction.north:
-                                GUI.DrawTexture(newRoverRect, Resources.Load("Textures/rover_back_64") as Texture);
+                                GUI.DrawTexture(newRoverRect, buttonTextures[ButtonType.rover]);
                                 break;
                             case MarsBase.Direction.east:
-                                GUI.DrawTexture(newRoverRect, Resources.Load("Textures/rover_right_64") as Texture);
+                                GUIUtility.RotateAroundPivot(90, new Vector2(newRoverRect.x + newRoverRect.width / 2, newRoverRect.y + newRoverRect.height / 2));
+                                GUI.DrawTexture(newRoverRect, buttonTextures[ButtonType.rover]);
+                                GUIUtility.RotateAroundPivot(-90, new Vector2(newRoverRect.x + newRoverRect.width / 2, newRoverRect.y + newRoverRect.height / 2));
                                 break;
                             case MarsBase.Direction.south:
-                                GUI.DrawTexture(newRoverRect, Resources.Load("Textures/rover_front_64") as Texture);
+                                GUIUtility.RotateAroundPivot(180, new Vector2(newRoverRect.x + newRoverRect.width / 2, newRoverRect.y + newRoverRect.height / 2));
+                                GUI.DrawTexture(newRoverRect, buttonTextures[ButtonType.rover]);
+                                GUIUtility.RotateAroundPivot(-180, new Vector2(newRoverRect.x + newRoverRect.width / 2, newRoverRect.y + newRoverRect.height / 2));
                                 break;
                             case MarsBase.Direction.west:
-                                GUI.DrawTexture(newRoverRect, Resources.Load("Textures/rover_left_64") as Texture);
+                                GUIUtility.RotateAroundPivot(-90, new Vector2(newRoverRect.x + newRoverRect.width / 2, newRoverRect.y + newRoverRect.height / 2));
+                                GUI.DrawTexture(newRoverRect, buttonTextures[ButtonType.rover]);
+                                GUIUtility.RotateAroundPivot(90, new Vector2(newRoverRect.x + newRoverRect.width / 2, newRoverRect.y + newRoverRect.height / 2));
                                 break;
                         }
                         GUI.color = new Color(1f, 1f, 1f, 1f);
+
+                        // Draw Resource Icons
+                        if (rover.resource == MarsBase.ResourceType.rawIron) {
+                            Rect iconRect = new Rect(newRoverRect.x, newRoverRect.y, 16, 16);
+                            GUI.DrawTexture(iconRect, Resources.Load("Textures/rock_icon") as Texture);
+                        }
+                        else if (rover.resource == MarsBase.ResourceType.refinedIron) {
+                            Rect iconRect = new Rect(newRoverRect.x, newRoverRect.y, 16, 16);
+                            GUI.DrawTexture(iconRect, Resources.Load("Textures/iron_icon") as Texture);
+                        }
                         break;
                 }
             }

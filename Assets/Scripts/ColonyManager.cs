@@ -11,11 +11,16 @@ public class ColonyManager : MonoBehaviour {
     private List<MarsBase> m_bases;
 
     // Resource Tracking Variables
-    private int m_money;
     private int m_iron;
+    private int m_money;
     private bool m_running = false;
     private Dictionary<ShopItems, int> m_costs;
 
+    // Timer Events Variables
+    public float currentSpaceElevatorTime;
+    public float spaceElevatorTime = 60f;
+    public float currentAuditTime;
+    public float auditTime = 240f;
 
     // Accessors
     public int iron { get { return m_iron; } }
@@ -26,21 +31,57 @@ public class ColonyManager : MonoBehaviour {
 
     // Use this for initialization
     void Start() {
+        currentSpaceElevatorTime = spaceElevatorTime;
+        currentAuditTime = auditTime;
         m_bases = new List<MarsBase>();
-        m_money = 100;
         m_iron = 0;
+        m_money = 100;
         m_costs = new Dictionary<ShopItems, int>();
         m_costs.Add(ShopItems.miningBase, 50);
     }
 
+    void Update() {
+        currentSpaceElevatorTime -= Time.deltaTime;
+        if (currentSpaceElevatorTime <= 0) {
+            SpaceElevatorArrived();
+        }
+
+        currentAuditTime -= Time.deltaTime;
+        if (currentAuditTime <= 0) {
+            AuditInventory();
+        }
+    }
+
+    private void SpaceElevatorArrived() {
+        m_money += m_iron * 50;
+        m_iron = 0;
+        currentSpaceElevatorTime = spaceElevatorTime;
+    }
+
+    private void AuditInventory() {
+        currentAuditTime = auditTime;
+    }
+
     public void AddBase() {
-        m_bases.Add(new MarsBase());
+        m_bases.Add(new MarsBase(TramLaunched));
         m_money -= m_costs[ShopItems.miningBase];
     }
 
     public void StartSim() {
         m_running = true;
         StartCoroutine("GridClock");
+    }
+
+    public void TramLaunched(List<MarsBase.ResourceType> resources) {
+        foreach (MarsBase.ResourceType resource in resources) {
+            if (resource == MarsBase.ResourceType.refinedIron) {
+                m_iron++;
+            }
+            else if (resource == MarsBase.ResourceType.doubleRefinedIron) {
+                m_iron += 2;
+            }
+        }
+        resources.Clear();
     }
 
     public void StopSim() {
