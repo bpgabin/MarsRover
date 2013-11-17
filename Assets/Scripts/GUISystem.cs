@@ -6,7 +6,7 @@ using System.Collections.ObjectModel;
 public class GUISystem : MonoBehaviour {
 
 	public Camera mainCamera;
-    public enum ButtonType { rover, drill, refinery, arrowUp, arrowLeft, arrowRight, grab, drop, blank }
+    public enum ButtonType { rover, arrowUp, arrowLeft, arrowRight, grab, drop, blank }
 
     public GUISkin Ourskin;
     private delegate void GUIFunction();
@@ -18,6 +18,8 @@ public class GUISystem : MonoBehaviour {
     private bool dragging = false;
     private Vector2 scrollPosition = Vector2.zero;
     private ButtonType draggingButton;
+    private Dictionary<int, Texture> drillTextures;
+    private Dictionary<int, Texture> refineryTextures;
     private Dictionary<ButtonType, Texture> buttonTextures;
     private Dictionary<ButtonType, MarsBase.Rover.ActionType> buttonToAction;
     private Dictionary<MarsBase.Rover.ActionType, ButtonType> actionToButton;
@@ -31,8 +33,6 @@ public class GUISystem : MonoBehaviour {
         buttonTextures[ButtonType.arrowLeft] = Resources.Load("Textures/rotateLeftIcon") as Texture;
         buttonTextures[ButtonType.arrowRight] = Resources.Load("Textures/rotateRightIcon") as Texture;
         buttonTextures[ButtonType.rover] = Resources.Load("Textures/rover") as Texture;
-        buttonTextures[ButtonType.drill] = Resources.Load("Textures/bucketwheelexcavator_small") as Texture;
-        buttonTextures[ButtonType.refinery] = Resources.Load("Textures/refinery_small") as Texture;
 
         buttonToAction = new Dictionary<ButtonType, MarsBase.Rover.ActionType>();
         buttonToAction[ButtonType.arrowUp] = MarsBase.Rover.ActionType.forward;
@@ -49,6 +49,16 @@ public class GUISystem : MonoBehaviour {
         actionToButton[MarsBase.Rover.ActionType.grab] = ButtonType.grab;
         actionToButton[MarsBase.Rover.ActionType.drop] = ButtonType.drop;
         actionToButton[MarsBase.Rover.ActionType.none] = ButtonType.blank;
+
+        drillTextures = new Dictionary<int, Texture>();
+        drillTextures[1] = Resources.Load("Textures/bucketwheelexcavator_small_red") as Texture;
+        drillTextures[2] = Resources.Load("Textures/bucketwheelexcavator_small_green") as Texture;
+        drillTextures[3] = Resources.Load("Textures/bucketwheelexcavator_small_blue") as Texture;
+
+        refineryTextures = new Dictionary<int, Texture>();
+        refineryTextures[1] = Resources.Load("Textures/refinery_small_red") as Texture;
+        refineryTextures[2] = Resources.Load("Textures/refinery_small_green") as Texture;
+        refineryTextures[3] = Resources.Load("Textures/refinery_small_blue") as Texture;
 
         currentGUI = MainMenuGUI;
     }
@@ -80,7 +90,7 @@ public class GUISystem : MonoBehaviour {
         GUI.skin = Ourskin;
 
         // Draw Background
-        GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Resources.Load("Textures/marsbackground_01") as Texture);
+        GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Resources.Load("Textures/marsbackground_02") as Texture);
 
 
         GUILayout.BeginVertical();
@@ -132,8 +142,26 @@ public class GUISystem : MonoBehaviour {
         List<Rect> actionRects = new List<Rect>();
 
         // Draw Background
-        GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Resources.Load("Textures/marsbackground_01") as Texture);
+        //GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Resources.Load("Textures/marsbackground_01") as Texture);
+        switch (currentBase.baseNumber) {
+            case MarsBase.BaseNumber.baseOne:
+                GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Resources.Load("Textures/level1") as Texture);
+                break;
+            case MarsBase.BaseNumber.baseTwo:
+                GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Resources.Load("Textures/level2") as Texture);
+                break;
+            case MarsBase.BaseNumber.baseThree:
+                GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Resources.Load("Textures/level3") as Texture);
+                break;
+            case MarsBase.BaseNumber.baseFour:
+                GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Resources.Load("Textures/level4") as Texture);
+                break;
+            case MarsBase.BaseNumber.baseFive:
+                GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Resources.Load("Textures/level5") as Texture);
+                break;
+        }
 
+        /*
         // Tabs at the top showing various info
         GUI.Box(new Rect(2, 2, 240, 40), GUIContent.none);
         GUILayout.BeginArea(new Rect(20, 14, 220, 40));
@@ -179,12 +207,13 @@ public class GUISystem : MonoBehaviour {
         GUI.enabled = true;
         GUILayout.EndHorizontal();
         GUILayout.EndArea();
-
+        */
+         
         // Context Panel
         if (currentBase.selectedRover == null) {
             GUI.Box(new Rect(Screen.width - 260, 10, 250, 520), "Buildings");
-            rects[ButtonType.drill] = new Rect(Screen.width - 260 + 250 / 2 - 132 / 2, 30, 128, 82.286f);
-            rects[ButtonType.refinery] = new Rect(Screen.width - 260 + 250 / 2 - 132 / 2, 30 + 132 + 20, 112, 80);
+            //rects[ButtonType.drill] = new Rect(Screen.width - 260 + 250 / 2 - 132 / 2, 30, 128, 82.286f);
+            //rects[ButtonType.refinery] = new Rect(Screen.width - 260 + 250 / 2 - 132 / 2, 30 + 132 + 20, 112, 80);
             rects[ButtonType.rover] = new Rect(Screen.width - 260 + 250 / 2 - 16, 30 + 264 + 40, 32, 32);
 
             foreach (KeyValuePair<ButtonType, Rect> entry in rects) {
@@ -307,10 +336,14 @@ public class GUISystem : MonoBehaviour {
                     }
                     else {
                         Vector2 pos = Event.current.mousePosition;
-                        int x = Mathf.RoundToInt((pos.x - 10) / 36);
-                        int y = Mathf.RoundToInt((pos.y - 50) / 36);
-                        if (x >= 0 && x < MarsBase.GRID_WIDTH && y >= 0 && y < MarsBase.GRID_HEIGHT)
-                            currentBase.BuyPart(draggingButton, x, MarsBase.GRID_HEIGHT - y);
+
+                        int x = Mathf.FloorToInt(pos.x / 30);
+                        int y = Mathf.FloorToInt(pos.y / 30) + 1;
+
+                        if (x >= 0 && x < MarsBase.GRID_WIDTH && y >= 0 && y <= MarsBase.GRID_HEIGHT) {
+                            if (currentBase.board[x, MarsBase.GRID_HEIGHT - y].tileType == MarsBase.GridTile.TileType.open)
+                                currentBase.BuyPart(draggingButton, x, MarsBase.GRID_HEIGHT - y);
+                        }
                     }
                 }
             }
@@ -329,57 +362,52 @@ public class GUISystem : MonoBehaviour {
         //GUI.skin = Ourskin;
         Dictionary<Rect, MarsBase.Rover> roverRects = new Dictionary<Rect, MarsBase.Rover>();
 
-        GUILayout.BeginArea(new Rect(10, 50, 676, 550));
+        GUILayout.BeginArea(new Rect(-1, -1, 691, 600));
         // Iterate through the grid
         for (int j = MarsBase.GRID_HEIGHT - 1; j >= 0; j--) {
             GUILayout.BeginHorizontal();
             for (int i = 0; i < MarsBase.GRID_WIDTH; i++) {
                 switch (currentBase.board[i, j].tileType) {
                     case MarsBase.GridTile.TileType.open:
-                        //if (selectedRover == null) GUILayout.FlexibleSpace();
-                        GUI.skin = null;
-                        GUI.color = new Color(1.0f, 1.0f, 1.0f, 0.5f);
-                        GUILayout.Box(GUIContent.none, GUILayout.Width(32), GUILayout.Height(32));
+                        GUI.color = new Color(1.0f, 1.0f, 1.0f, 0.1f);
+                        GUI.Box(new Rect(30 * i, 30 * (MarsBase.GRID_HEIGHT - j - 1), 31, 31), GUIContent.none, "Grid");
                         GUI.color = Color.white;
-                        GUI.skin = Ourskin;
                         break;
                     case MarsBase.GridTile.TileType.building:
-                        if (currentBase.board[i, j].building.buildingType == MarsBase.Building.BuildingType.mine) {
-                            GUILayout.Box("Drill", GUILayout.Width(32), GUILayout.Height(32));
-                        }
-                        else if(currentBase.board[i, j].building.buildingType == MarsBase.Building.BuildingType.processingPlant) {
-                            GUILayout.Box("Refinery", GUILayout.Width(32), GUILayout.Height(32));
-                        }
-                        else {
-                            GUILayout.Box("Tram", GUILayout.Width(32), GUILayout.Height(32));
+                        if (currentBase.board[i, j].buildingSprite) {
+                            MarsBase.Building building = currentBase.board[i, j].building;
+                            if (building.buildingType == MarsBase.Building.BuildingType.mine) {
+                                Texture drillTex = drillTextures[building.buildingLevel];
+                                GUI.DrawTexture(new Rect((30 * (i - 4)) + (180 - drillTex.width) / 2, (30 * (MarsBase.GRID_HEIGHT - j - 3)) + (120 - drillTex.height) / 2, drillTex.width, drillTex.height), drillTex);
+                            }
+                            else if (building.buildingType == MarsBase.Building.BuildingType.processingPlant) {
+                                Texture refineryTex = refineryTextures[building.buildingLevel];
+                                GUI.DrawTexture(new Rect((30 * (i - 3)) + (120 - refineryTex.width) / 2, (30 * (MarsBase.GRID_HEIGHT - j - 2)) + (90 - refineryTex.height) / 2, refineryTex.width, refineryTex.height), refineryTex);
+                            }
+                            else if (building.buildingType == MarsBase.Building.BuildingType.tramStation) {
+                                Texture tramTexture = Resources.Load("Textures/tram_small") as Texture;
+                                GUI.DrawTexture(new Rect((30 * (i - 1)) + 10, (30 * (MarsBase.GRID_HEIGHT - j - 1)), tramTexture.width, tramTexture.height), tramTexture);
+                            }
                         }
                         break;    
-                    /*GUILayout.FlexibleSpace();
-                        GUI.skin = null;
-                        GUI.color = new Color(1.0f, 1.0f, 1.0f, 0.5f);
-                        GUI.Box(new Rect(68 * i, 68 * (MarsBase.GRID_HEIGHT - j - 1), 132, 132), GUIContent.none);
-                        GUI.color = Color.white;
-                        GUI.skin = Ourskin;
-                        GUI.DrawTexture(new Rect(68 * i, 68 * (MarsBase.GRID_HEIGHT - j - 1) + 25, 132, 84.857f), buttonTextures[ButtonType.drill]);
-                        break;
-                         */
                     case MarsBase.GridTile.TileType.wall:
-                        GUILayout.Box("Wall", GUILayout.Width(32), GUILayout.Height(32));    
-                    //GUILayout.FlexibleSpace();
                         break;
                     case MarsBase.GridTile.TileType.rover:
                         MarsBase.Rover rover = currentBase.board[i, j].rover;
                         MarsBase.Direction direction = rover.direction;
 
-                        GUI.skin = null;
-                        if (currentBase.selectedRover != rover) GUI.color = new Color(0f, 1f, 0f, 0.5f);
-                        GUILayout.Box(GUIContent.none, GUILayout.Width(32), GUILayout.Height(32));
-                        GUI.color = Color.white;
-                        GUI.skin = Ourskin;
-
-                        Rect newRoverRect = new Rect(36 * i, 36 * (MarsBase.GRID_HEIGHT - j - 1), 32, 32);
-                        Rect newScreenRect = new Rect(36 * i + 10, 36 * (MarsBase.GRID_HEIGHT - j - 1) + 50, 32, 32);
-                        roverRects[newScreenRect] = rover;
+                        if (currentBase.selectedRover == rover) {
+                            GUI.color = new Color(0f, 1f, 0f, 0.5f);
+                            GUI.Box(new Rect(30 * i, 30 * (MarsBase.GRID_HEIGHT - j - 1), 31, 31), GUIContent.none, "Grid");
+                            GUI.color = Color.white;
+                        }
+                        else {
+                            GUI.color = new Color(1f, 1f, 1f, 0.1f);
+                            GUI.Box(new Rect(30 * i, 30 * (MarsBase.GRID_HEIGHT - j - 1), 31, 31), GUIContent.none, "Grid");
+                            GUI.color = Color.white;
+                        }
+                        Rect newRoverRect = new Rect((30 * i) + 1, (30 * (MarsBase.GRID_HEIGHT - j - 1)) + 2, 29, 28);
+                        roverRects[newRoverRect] = rover;
                         if (rover.crashed) GUI.color = Color.red;
                         switch (direction) {
                             case MarsBase.Direction.north:

@@ -63,7 +63,26 @@ public class ColonyManager : MonoBehaviour {
     }
 
     public void AddBase() {
-        m_bases.Add(new MarsBase(TramLaunched));
+        switch (m_bases.Count) {
+            case 0:
+                m_bases.Add(new MarsBase(MarsBase.BaseNumber.baseOne, TramLaunched));
+                break;
+            case 1:
+                m_bases.Add(new MarsBase(MarsBase.BaseNumber.baseTwo, TramLaunched));
+                break;
+            case 2:
+                m_bases.Add(new MarsBase(MarsBase.BaseNumber.baseThree, TramLaunched));
+                break;
+            case 3:
+                m_bases.Add(new MarsBase(MarsBase.BaseNumber.baseFour, TramLaunched));
+                break;
+            case 4:
+                m_bases.Add(new MarsBase(MarsBase.BaseNumber.baseFive, TramLaunched));
+                break;
+            default:
+                Debug.LogError("Sixth MarsBase is attempting to be made.");
+                break;
+        }
         m_money -= m_costs[ShopItems.miningBase];
     }
 

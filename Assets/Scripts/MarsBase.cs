@@ -14,10 +14,11 @@ public class MarsBase {
     private GridTile[,] baseGrid;
     private bool m_running = false;
     private bool m_crashed = false;
+    // TODO: Track Different Levels / Base numbers and do stuff with that data.
     private BaseNumber m_baseNumber;
 
-    public const int GRID_HEIGHT = 14;
-    public const int GRID_WIDTH = 18;
+    public const int GRID_HEIGHT = 20;
+    public const int GRID_WIDTH = 23;
     public Rover selectedRover;
 
     public GridTile[,] board { get { return baseGrid; } }
@@ -29,11 +30,13 @@ public class MarsBase {
     public class GridTile {
         // Public Variables
         public enum TileType { rover, building, wall, open }
+        public bool buildingSprite = false;
 
         // Private variables
         private TileType m_tileType;
         private Rover m_rover;
         private Building m_building;
+        
 
         // Public Accessors
         public TileType tileType {
@@ -80,6 +83,7 @@ public class MarsBase {
     public abstract class Building {
         // Public Variables
         public enum BuildingType { mine, processingPlant, tramStation }
+        public int buildingLevel = 1;
 
         // Protected Variables
         protected BuildingType bType;
@@ -323,7 +327,9 @@ public class MarsBase {
         }
     }
 
-    public MarsBase(TramLaunchedDelegate tramFunction) {
+    public MarsBase(MarsBase.BaseNumber bNumber, TramLaunchedDelegate tramFunction) {
+        // Handoff constructor inputs
+        m_baseNumber = bNumber;
         tramLaunchedFunction = tramFunction;
 
         // Initialize Grid Structure
@@ -334,24 +340,162 @@ public class MarsBase {
             }
         }
 
+        // Load the level
+        LoadLevel();
+    }
+
+    void LoadLevel() {
+        switch (m_baseNumber) {
+            case BaseNumber.baseOne:
+                LevelOne();
+                break;
+            case BaseNumber.baseTwo:
+                LevelTwo();
+                break;
+            case BaseNumber.baseThree:
+                LevelThree();
+                break;
+            case BaseNumber.baseFour:
+                LevelFour();
+                break;
+            case BaseNumber.baseFive:
+                LevelFive();
+                break;
+        }
+    }
+
+    void LevelOne() {
         // Add Tram Station
-        baseGrid[GRID_WIDTH - 2, 0].building = new TramBuilding(tramLaunchedFunction);
-        baseGrid[GRID_WIDTH - 1, 0].tileType = GridTile.TileType.wall;
+        PlaceTram(GRID_WIDTH - 3, 1);
+
+        // Add Drill
+        PlaceDrill(1, 9);
+
+        // Add Refinery
+        PlaceRefinery(10, 13);
+
+        // Add Walls
+        baseGrid[0, 0].tileType = GridTile.TileType.wall;
+        baseGrid[1, 0].tileType = GridTile.TileType.wall;
+        baseGrid[2, 0].tileType = GridTile.TileType.wall;
+        baseGrid[3, 0].tileType = GridTile.TileType.wall;
+        baseGrid[4, 0].tileType = GridTile.TileType.wall;
+        baseGrid[5, 0].tileType = GridTile.TileType.wall;
+        baseGrid[0, 1].tileType = GridTile.TileType.wall;
+        baseGrid[1, 1].tileType = GridTile.TileType.wall;
+        baseGrid[2, 1].tileType = GridTile.TileType.wall;
+        baseGrid[3, 1].tileType = GridTile.TileType.wall;
+        baseGrid[4, 1].tileType = GridTile.TileType.wall;
+        baseGrid[0, 2].tileType = GridTile.TileType.wall;
+        baseGrid[1, 2].tileType = GridTile.TileType.wall;
+        baseGrid[2, 2].tileType = GridTile.TileType.wall;
+        baseGrid[3, 2].tileType = GridTile.TileType.wall;
+        baseGrid[4, 2].tileType = GridTile.TileType.wall;
+        baseGrid[0, 3].tileType = GridTile.TileType.wall;
+        baseGrid[1, 3].tileType = GridTile.TileType.wall;
+        baseGrid[2, 3].tileType = GridTile.TileType.wall;
+        baseGrid[3, 3].tileType = GridTile.TileType.wall;
+        baseGrid[1, 4].tileType = GridTile.TileType.wall;
+        baseGrid[0, 12].tileType = GridTile.TileType.wall;
+        baseGrid[0, 13].tileType = GridTile.TileType.wall;
+        baseGrid[0, 14].tileType = GridTile.TileType.wall;
+        baseGrid[1, 14].tileType = GridTile.TileType.wall;
+        baseGrid[2, 14].tileType = GridTile.TileType.wall;
+        baseGrid[2, 15].tileType = GridTile.TileType.wall;
+        baseGrid[3, 15].tileType = GridTile.TileType.wall;
+        baseGrid[4, 15].tileType = GridTile.TileType.wall;
+        baseGrid[5, 15].tileType = GridTile.TileType.wall;
+        baseGrid[6, 15].tileType = GridTile.TileType.wall;
+        baseGrid[7, 15].tileType = GridTile.TileType.wall;
+        baseGrid[17, 18].tileType = GridTile.TileType.wall;
+        baseGrid[18, 18].tileType = GridTile.TileType.wall;
+        baseGrid[19, 18].tileType = GridTile.TileType.wall;
+        baseGrid[20, 18].tileType = GridTile.TileType.wall;
+        baseGrid[21, 18].tileType = GridTile.TileType.wall;
+        baseGrid[22, 18].tileType = GridTile.TileType.wall;
+        baseGrid[16, 19].tileType = GridTile.TileType.wall;
+        baseGrid[17, 19].tileType = GridTile.TileType.wall;
+        baseGrid[18, 19].tileType = GridTile.TileType.wall;
+        baseGrid[19, 19].tileType = GridTile.TileType.wall;
+        baseGrid[20, 19].tileType = GridTile.TileType.wall;
+        baseGrid[21, 19].tileType = GridTile.TileType.wall;
+        baseGrid[22, 19].tileType = GridTile.TileType.wall;
+    }
+
+    void LevelTwo() {
+
+    }
+
+    void LevelThree() {
+
+    }
+
+    void LevelFour() {
+
+    }
+
+    void LevelFive() {
+
+    }
+
+    void PlaceTram(int x, int y) {
+        baseGrid[x, y].tileType = GridTile.TileType.wall;
+        baseGrid[x + 1, y].building = new TramBuilding(tramLaunchedFunction);
+        baseGrid[x + 1, y].buildingSprite = true;
+        baseGrid[x + 2, y].tileType = GridTile.TileType.wall;
+        baseGrid[x, y - 1].tileType = GridTile.TileType.wall;
+        baseGrid[x + 1, y - 1].tileType = GridTile.TileType.wall;
+        baseGrid[x + 2, y - 1].tileType = GridTile.TileType.wall;
     }
 
     void PlaceDrill(int x, int y) {
-        baseGrid[x + 1, y - 1].building = new MiningBuilding();
-        baseGrid[x + 1, y].tileType = GridTile.TileType.wall;
-        baseGrid[x, y - 1].tileType = GridTile.TileType.wall;
-        baseGrid[x, y].tileType = GridTile.TileType.wall;
+        //baseGrid[x, y].tileType = GridTile.TileType.wall;
+        //baseGrid[x + 1, y].tileType = GridTile.TileType.wall;
+        //baseGrid[x + 2, y].tileType = GridTile.TileType.wall;
+        //baseGrid[x + 3, y].tileType = GridTile.TileType.wall;
+        //baseGrid[x + 4, y].tileType = GridTile.TileType.wall;
+        //baseGrid[x + 5, y].tileType = GridTile.TileType.wall;
+
+        //baseGrid[x, y - 1].tileType = GridTile.TileType.wall;
+        //baseGrid[x + 1, y - 1].tileType = GridTile.TileType.wall;
+        baseGrid[x + 2, y - 1].tileType = GridTile.TileType.wall;
+        baseGrid[x + 3, y - 1].tileType = GridTile.TileType.wall;
+        baseGrid[x + 4, y - 1].tileType = GridTile.TileType.wall;
+        //baseGrid[x + 5, y - 1].tileType = GridTile.TileType.wall;
+
+        //baseGrid[x, y - 2].tileType = GridTile.TileType.wall;
+        //baseGrid[x + 1, y - 2].tileType = GridTile.TileType.wall;
+        baseGrid[x + 2, y - 2].tileType = GridTile.TileType.wall;
+        baseGrid[x + 3, y - 2].tileType = GridTile.TileType.wall;
+        baseGrid[x + 4, y - 2].building = new MiningBuilding();
+        baseGrid[x + 4, y - 2].buildingSprite = true;
+        //baseGrid[x + 5, y - 2].tileType = GridTile.TileType.wall;
+
+        //baseGrid[x, y - 3].tileType = GridTile.TileType.wall;
+        //baseGrid[x + 1, y - 3].tileType = GridTile.TileType.wall;
+        baseGrid[x + 2, y - 3].tileType = GridTile.TileType.wall;
+        baseGrid[x + 3, y - 3].tileType = GridTile.TileType.wall;
+        baseGrid[x + 4, y - 3].tileType = GridTile.TileType.wall;
+        //baseGrid[x + 5, y - 3].building = new MiningBuilding();
+        //baseGrid[x + 5, y - 3].buildingSprite = true;
     }
 
     void PlaceRefinery(int x, int y) {
-        RefineryBuilding building = new RefineryBuilding();
         baseGrid[x, y].tileType = GridTile.TileType.wall;
         baseGrid[x + 1, y].tileType = GridTile.TileType.wall;
-        baseGrid[x, y - 1].building = building;
-        baseGrid[x + 1, y - 1].building = building;
+        baseGrid[x + 2, y].tileType = GridTile.TileType.wall;
+        baseGrid[x + 3, y].tileType = GridTile.TileType.wall;
+
+        baseGrid[x, y - 1].building = new RefineryBuilding();
+        baseGrid[x + 1, y- 1].tileType = GridTile.TileType.wall;
+        baseGrid[x + 2, y - 1].tileType = GridTile.TileType.wall;
+        baseGrid[x + 3, y - 1].building = new RefineryBuilding();
+        baseGrid[x + 3, y - 1].buildingSprite = true;
+
+        baseGrid[x, y - 2].tileType = GridTile.TileType.wall;
+        baseGrid[x + 1, y - 2].tileType = GridTile.TileType.wall;
+        baseGrid[x + 2, y - 2].tileType = GridTile.TileType.wall;
+        baseGrid[x + 3, y - 2].tileType = GridTile.TileType.wall;
     }
 
     public void StartSim() {
@@ -572,12 +716,6 @@ public class MarsBase {
         switch (buttonType) {
             case GUISystem.ButtonType.rover:
                 baseGrid[x, y].rover = new Rover(x, y);
-                break;
-            case GUISystem.ButtonType.drill:
-                PlaceDrill(x, y);
-                break;
-            case GUISystem.ButtonType.refinery:
-                PlaceRefinery(x, y);
                 break;
         }
     }
