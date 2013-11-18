@@ -123,7 +123,7 @@ public class GUISystem : MonoBehaviour {
                 text += "\nStopped";
                 GUI.color = Color.red;
             }
-            if (GUI.Button(new Rect(220 * (i + 1), 400, 100, 100), text)) {
+            if (GUI.Button(new Rect(100 * (i + 1), 400, 100, 100), text)) {
                 currentBase = colonyManager.bases[i];
                 currentGUI = BaseGUI;
                 break;
@@ -382,7 +382,7 @@ public class GUISystem : MonoBehaviour {
                             }
                             else if (building.buildingType == MarsBase.Building.BuildingType.processingPlant) {
                                 Texture refineryTex = refineryTextures[building.buildingLevel];
-                                GUI.DrawTexture(new Rect((30 * (i - 3)) + (120 - refineryTex.width) / 2, (30 * (MarsBase.GRID_HEIGHT - j - 2)) + (90 - refineryTex.height) / 2, refineryTex.width, refineryTex.height), refineryTex);
+                                GUI.DrawTexture(new Rect((30 * (i - 3)) + (120 - refineryTex.width) / 2, (30 * (MarsBase.GRID_HEIGHT - j - 2)) + (90 - refineryTex.height) / 2 + 5, refineryTex.width, refineryTex.height), refineryTex);
                             }
                             else if (building.buildingType == MarsBase.Building.BuildingType.tramStation) {
                                 Texture tramTexture = Resources.Load("Textures/tram_small") as Texture;

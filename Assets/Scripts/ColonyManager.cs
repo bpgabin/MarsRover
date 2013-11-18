@@ -35,7 +35,7 @@ public class ColonyManager : MonoBehaviour {
         currentAuditTime = auditTime;
         m_bases = new List<MarsBase>();
         m_iron = 0;
-        m_money = 100;
+        m_money = 500;
         m_costs = new Dictionary<ShopItems, int>();
         m_costs.Add(ShopItems.miningBase, 50);
     }
