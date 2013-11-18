@@ -5,7 +5,7 @@ using System.Collections.ObjectModel;
 
 public class MarsBase {
     public enum Direction { north, east, west, south }
-    public enum ResourceType { rawIron, refinedIron, doubleRawIron, doubleRefinedIron, none }
+    public enum ResourceType { rawIron, refinedIron, doubleRawIron, doubleRefinedIron, tripleRawIron, tripleRefinedIron, none }
     public enum BaseNumber { baseOne, baseTwo, baseThree, baseFour, baseFive }
 
     public delegate void TramLaunchedDelegate(List<ResourceType> resources);
@@ -20,6 +20,7 @@ public class MarsBase {
     public const int GRID_HEIGHT = 20;
     public const int GRID_WIDTH = 23;
     public Rover selectedRover;
+    public Building selectedBuilding;
 
     public GridTile[,] board { get { return baseGrid; } }
     public bool running { get { return m_running; } }
@@ -133,7 +134,7 @@ public class MarsBase {
         }
 
         public override void Update() {
-            if (storedResources.Count >= 5) {
+            if (storedResources.Count >= 1) {
                 //docked = false;
                 tramLaunchedFunction(storedResources);
             }
@@ -148,7 +149,14 @@ public class MarsBase {
 
         // Overridden Virtual Function
         public override ResourceType PickUp(Direction direction) {
-            return ResourceType.rawIron;
+            if (buildingLevel == 1)
+                return ResourceType.rawIron;
+            else if (buildingLevel == 2)
+                return ResourceType.doubleRawIron;
+            else if (buildingLevel == 3)
+                return ResourceType.tripleRawIron;
+            else
+                return ResourceType.none;
         }
 
         public override void Reset() {
@@ -159,7 +167,6 @@ public class MarsBase {
     private class RefineryBuilding : Building {
         private List<int> processTimes;
         private int processedIron = 0;
-        private int processTime = 3;
 
         public RefineryBuilding() {
             processTimes = new List<int>();
@@ -170,7 +177,12 @@ public class MarsBase {
             if (processedIron > 0) {
                 if (direction == Direction.west) {
                     processedIron--;
-                    return ResourceType.refinedIron;
+                    if (buildingLevel == 1)
+                        return ResourceType.refinedIron;
+                    else if (buildingLevel == 2)
+                        return ResourceType.doubleRefinedIron;
+                    else if (buildingLevel == 3)
+                        return ResourceType.tripleRefinedIron;
                 }
             }
             return ResourceType.none;
@@ -179,7 +191,18 @@ public class MarsBase {
         public override bool DropOff(ResourceType rType, Direction direction) {
             if (direction == Direction.east) {
                 if (rType == ResourceType.rawIron) {
-                    processTimes.Add(processTime);
+                    processTimes.Add(buildingLevel);
+                    return true;
+                }
+                else if (rType == ResourceType.doubleRawIron) {
+                    processTimes.Add(buildingLevel);
+                    processTimes.Add(buildingLevel);
+                    return true;
+                }
+                else if (rType == ResourceType.tripleRawIron) {
+                    processTimes.Add(buildingLevel);
+                    processTimes.Add(buildingLevel);
+                    processTimes.Add(buildingLevel);
                     return true;
                 }
             }
@@ -207,6 +230,7 @@ public class MarsBase {
     public class Rover {
         // Public Variables
         public enum ActionType { none, forward, turnRight, turnLeft, grab, drop }
+        public Direction startDirection = Direction.north;
 
         // Private Variables
         private int m_currentActionIndex;
@@ -241,7 +265,10 @@ public class MarsBase {
             }
         }
 
-        public Direction direction { get { return m_direction; } }
+        public Direction direction {
+            get { return m_direction; }
+            set { m_direction = value; }
+        }
 
         public int currentActionIndex { get { return m_currentActionIndex; } }
 
@@ -314,12 +341,16 @@ public class MarsBase {
         public void ResetRover() {
             m_currentActionIndex = 0;
             m_crashed = false;
-            m_direction = Direction.north;
+            m_direction = startDirection;
             m_resource = ResourceType.none;
         }
 
         public void AddAction(ActionType newAction) {
             actionList.Add(newAction);
+        }
+
+        public void AddActionAt(ActionType newAction, int index) {
+            actionList.Insert(index, newAction);
         }
 
         public void RemoveAction(int index) {
@@ -1081,16 +1112,18 @@ public class MarsBase {
         //baseGrid[x + 2, y].tileType = GridTile.TileType.wall;
         //baseGrid[x + 3, y].tileType = GridTile.TileType.wall;
 
-        baseGrid[x, y - 1].building = new RefineryBuilding();
+        Building refinery = new RefineryBuilding();
+
+        baseGrid[x, y - 1].tileType = GridTile.TileType.wall;
         baseGrid[x + 1, y- 1].tileType = GridTile.TileType.wall;
         baseGrid[x + 2, y - 1].tileType = GridTile.TileType.wall;
-        baseGrid[x + 3, y - 1].building = new RefineryBuilding();
-        baseGrid[x + 3, y - 1].buildingSprite = true;
+        baseGrid[x + 3, y - 1].tileType = GridTile.TileType.wall;
 
-        baseGrid[x, y - 2].tileType = GridTile.TileType.wall;
+        baseGrid[x, y - 2].building = refinery;
         baseGrid[x + 1, y - 2].tileType = GridTile.TileType.wall;
         baseGrid[x + 2, y - 2].tileType = GridTile.TileType.wall;
-        baseGrid[x + 3, y - 2].tileType = GridTile.TileType.wall;
+        baseGrid[x + 3, y - 2].building = refinery;
+        baseGrid[x + 3, y - 2].buildingSprite = true;
     }
 
     public void StartSim() {
@@ -1121,6 +1154,7 @@ public class MarsBase {
                     Vector2 startPos = rover.startPos;
                     int x = (int)startPos.x;
                     int y = (int)startPos.y;
+
                     newBaseGrid[x, y] = baseGrid[i, j];
                     if(x != i || y != j)
                         newBaseGrid[i, j] = new GridTile(GridTile.TileType.open);
@@ -1261,6 +1295,18 @@ public class MarsBase {
                     }
                 }
                 break;
+        }
+    }
+
+    public void RemoveRover(Rover rover) {
+        for (int i = 0; i < GRID_WIDTH; i++) {
+            for (int j = 0; j < GRID_HEIGHT; j++) {
+                if (baseGrid[i, j].tileType == GridTile.TileType.rover) {
+                    if (baseGrid[i, j].rover == rover) {
+                        baseGrid[i, j] = new GridTile(GridTile.TileType.open);
+                    }
+                }
+            }
         }
     }
 

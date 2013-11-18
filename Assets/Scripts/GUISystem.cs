@@ -9,9 +9,15 @@ public class GUISystem : MonoBehaviour {
     public enum ButtonType { rover, arrowUp, arrowLeft, arrowRight, grab, drop, blank }
 
     public GUISkin Ourskin;
+    public AudioClip[] songs;
+    public AudioClip[] effects;
+
     private delegate void GUIFunction();
     private GUIFunction currentGUI;
+    private GUIFunction pausedGUI;
+    private GUIFunction menuGUI;
     private ColonyManager colonyManager;
+    private int songIndex = 0;
 
     private MarsBase currentBase = null;
 
@@ -24,7 +30,21 @@ public class GUISystem : MonoBehaviour {
     private Dictionary<ButtonType, MarsBase.Rover.ActionType> buttonToAction;
     private Dictionary<MarsBase.Rover.ActionType, ButtonType> actionToButton;
 
+    private AudioClip robotGrab;
+    private AudioClip buttonPressSound;
+    private AudioClip dragClick;
+
+    private int instructionsPage = 0;
+
     void Start() {
+        audio.clip = songs[0];
+        audio.Play();
+        Invoke("PlayNextSong", songs[0].length);
+
+        robotGrab = effects[0];
+        buttonPressSound = effects[1];
+        dragClick = effects[2];
+
         buttonTextures = new Dictionary<ButtonType, Texture>();
         buttonTextures[ButtonType.blank] = Resources.Load("Textures/blankIcon") as Texture;
         buttonTextures[ButtonType.drop] = Resources.Load("Textures/dropIcon") as Texture;
@@ -63,6 +83,16 @@ public class GUISystem : MonoBehaviour {
         currentGUI = MainMenuGUI;
     }
 
+    void PlayNextSong() {
+        audio.Stop();
+        songIndex++;
+        if (songIndex >= songs.Length)
+            songIndex = 0;
+        audio.clip = songs[songIndex];
+        audio.Play();
+        Invoke("PlayNextSong", audio.clip.length);
+    }
+
     void OnGUI() {
         currentGUI();
     }
@@ -75,13 +105,257 @@ public class GUISystem : MonoBehaviour {
 
 	}
 
+    void Update() {
+        if (currentGUI == ColonyGUI || currentGUI == BaseGUI) {
+            if (colonyManager.auditing) {
+                Time.timeScale = 0;
+                pausedGUI = currentGUI;
+                currentGUI = AuditGUI;
+            }
+        }
+    }
+
+    void AuditGUI() {
+        GUI.skin = Ourskin;
+        GUI.Box(new Rect(Screen.width / 2 - 200, 50, 400, 500), GUIContent.none);
+
+        GUI.Label(new Rect(Screen.width / 2 - 90, 55, 200, 40), "performance audit");
+
+        GUI.skin = null;
+        GUI.Box(new Rect(Screen.width / 2 - 180, 80, 360, 420), GUIContent.none);
+        GUI.skin = Ourskin;
+
+        GUI.Label(new Rect(Screen.width / 2 - 150, 100, 300, 25), "GENERAL STATS");
+        GUI.Label(new Rect(Screen.width / 2 - 150, 125, 300, 25), "money: " + colonyManager.money.ToString());
+        GUI.Label(new Rect(Screen.width / 2 - 150, 150, 300, 25), "total iron sold: " + colonyManager.totalIronSold.ToString());
+        GUI.Label(new Rect(Screen.width / 2 - 150, 175, 300, 25), "times audited: " + (colonyManager.timesAudited).ToString());
+
+        GUI.Label(new Rect(Screen.width / 2 - 150, 225, 300, 25), "AUDIT");
+        GUI.Label(new Rect(Screen.width / 2 - 150, 250, 300, 25), "audit goal: " + colonyManager.lastAuditGoal.ToString());
+        GUI.Label(new Rect(Screen.width / 2 - 150, 275, 300, 25), "iron sold since last audit: " + colonyManager.ironSoldSinceAudit.ToString());
+        GUI.Label(new Rect(Screen.width / 2 - 150, 300, 325, 25), "strikes: " + colonyManager.strikes.ToString());
+        if (colonyManager.ironSoldSinceAudit >= colonyManager.lastAuditGoal) {
+            GUI.Label(new Rect(Screen.width / 2 - 150, 325, 400, 60), "GOOD JOB!\nCONTINUE YOUR SUCCESS.");
+        }
+        else if(colonyManager.strikes >= 3) {
+            GUI.Label(new Rect(Screen.width / 2 - 150, 325, 400, 60), "THREE STRIKES!\nYOU'RE FIRED!");
+        }
+        else {
+            GUI.Label(new Rect(Screen.width / 2 - 150, 325, 400, 60), "YOU'VE EARNED A STRIKE!\nYOU MUST IMPROVE.");
+        }
+        
+
+        
+
+        // Game Failed Condition
+        if (colonyManager.strikes >= 3) {
+            if (GUI.Button(new Rect(Screen.width / 2 - 50, 510, 100, 30), "main menu")) {
+                colonyManager = null;
+                Time.timeScale = 1;
+                currentGUI = MainMenuGUI;
+                KongregateAPI kongAPI = gameObject.GetComponent<KongregateAPI>();
+                kongAPI.SubmitStats("gameCompleted", 1);
+                kongAPI.SubmitStats("mostTotalIron", colonyManager.totalIronSold);
+                kongAPI.SubmitStats("mostAuditTimes", colonyManager.timesAudited);
+            }
+        }
+        else {
+            GUI.Label(new Rect(Screen.width / 2 - 150, 400, 400, 25), "NEW GOAL");
+            GUI.Label(new Rect(Screen.width / 2 - 150, 425, 400, 25), "new audit goal: " + colonyManager.auditGoal.ToString());
+
+            if (GUI.Button(new Rect(Screen.width / 2 - 50, 510, 100, 30), "resume")) {
+                Time.timeScale = 1;
+                colonyManager.auditing = false;
+                currentGUI = pausedGUI;
+                KongregateAPI kongAPI = gameObject.GetComponent<KongregateAPI>();
+                kongAPI.SubmitStats("mostTotalIron", colonyManager.totalIronSold);
+                kongAPI.SubmitStats("mostAuditTimes", colonyManager.timesAudited);
+            }
+        }
+
+    }
+
     void MainMenuGUI() {
         GUI.skin = Ourskin;
 		GUI.DrawTexture(new Rect(Screen.width / 2 - 176, 100, 352, 148), Resources.Load("Textures/redrover") as Texture);
-        GUILayout.BeginArea(new Rect(Screen.width / 2 - 50, Screen.height / 2 + 50 , 100, 200));
+        GUILayout.BeginArea(new Rect(Screen.width / 2 - 70, Screen.height / 2 + 50 , 140, 200));
         if (GUILayout.Button("Start")) {
             colonyManager = gameObject.AddComponent<ColonyManager>();
 			currentGUI = ColonyGUI;
+            audio.PlayOneShot(buttonPressSound);
+        }
+        if (GUILayout.Button("Instructions")) {
+            menuGUI = currentGUI;
+            currentGUI = InstructionsGUI;
+            audio.PlayOneShot(buttonPressSound);
+        }
+        if (GUILayout.Button("Options")) {
+            menuGUI = currentGUI;
+            currentGUI = OptionsMenuGUI;
+            audio.PlayOneShot(buttonPressSound);
+        }
+        if (GUILayout.Button("Credits")) {
+            menuGUI = currentGUI;
+            currentGUI = CreditsGUI;
+            audio.PlayOneShot(buttonPressSound);
+        }
+        GUILayout.EndArea();
+    }
+
+    void PauseMenuGUI() {
+        GUI.skin = Ourskin;
+        GUI.DrawTexture(new Rect(Screen.width / 2 - 176, 100, 352, 148), Resources.Load("Textures/redrover") as Texture);
+        GUILayout.BeginArea(new Rect(Screen.width / 2 - 70, Screen.height / 2 + 50, 140, 200));
+        if (GUILayout.Button("Resume")) {
+            currentGUI = pausedGUI;
+            Time.timeScale = 1;
+            audio.PlayOneShot(buttonPressSound);
+        }
+        if (GUILayout.Button("Instructions")) {
+            menuGUI = currentGUI;
+            currentGUI = InstructionsGUI;
+            audio.PlayOneShot(buttonPressSound);
+        }
+        if (GUILayout.Button("Options")) {
+            menuGUI = currentGUI;
+            currentGUI = OptionsMenuGUI;
+            audio.PlayOneShot(buttonPressSound);
+        }
+        if (GUILayout.Button("Credits")) {
+            menuGUI = currentGUI;
+            currentGUI = CreditsGUI;
+            audio.PlayOneShot(buttonPressSound);
+        }
+        GUILayout.EndArea();
+    }
+
+    void InstructionsGUI() {
+        GUI.skin = Ourskin;
+        //GUI.DrawTexture(new Rect(Screen.width / 2 - 176, 100, 352, 148), Resources.Load("Textures/redrover") as Texture);
+
+        GUI.Box(new Rect(26, 26, 908, 548), GUIContent.none);
+
+        if (instructionsPage == 0) {
+            GUI.DrawTexture(new Rect(30, 30, 900, 540), Resources.Load("Textures/baseInstructions") as Texture);
+        }
+        else if (instructionsPage == 1) {
+            GUI.DrawTexture(new Rect(30, 30, 900, 540), Resources.Load("Textures/programmingInstructions") as Texture);
+        }
+        else if (instructionsPage == 2) {
+            GUI.DrawTexture(new Rect(30, 30, 900, 540), Resources.Load("Textures/productionCycle") as Texture);
+        }
+        else if (instructionsPage == 3) {
+            GUI.DrawTexture(new Rect(30, 30, 900, 540), Resources.Load("Textures/overview") as Texture);
+        }
+        
+        GUILayout.BeginArea(new Rect(Screen.width / 2 - 120, Screen.height - 60, 240, 200));
+        GUILayout.BeginHorizontal();
+        GUILayout.FlexibleSpace();
+        if (instructionsPage > 0) {
+            if (GUILayout.Button("Prev")) {
+                instructionsPage--;
+                audio.PlayOneShot(buttonPressSound);
+            }
+        }
+        else GUILayout.FlexibleSpace();
+        if (GUILayout.Button("Return", GUILayout.Width(100))) {
+            instructionsPage = 0;
+            currentGUI = menuGUI;
+            audio.PlayOneShot(buttonPressSound);
+        }
+        if (instructionsPage < 3) {
+            if (GUILayout.Button("Next")) {
+                instructionsPage++;
+                audio.PlayOneShot(buttonPressSound);
+            }
+        }
+        else GUILayout.FlexibleSpace();
+        GUILayout.FlexibleSpace();
+        GUILayout.EndHorizontal();
+        GUILayout.EndArea();
+    }
+
+    void OptionsMenuGUI() {
+        GUI.skin = Ourskin;
+        GUI.DrawTexture(new Rect(Screen.width / 2 - 176, 100, 352, 148), Resources.Load("Textures/redrover") as Texture);
+        GUILayout.BeginArea(new Rect(Screen.width / 2 - 120, Screen.height / 2 + 50, 240, 200));
+        GUILayout.BeginHorizontal();
+        GUILayout.FlexibleSpace();
+        GUILayout.Box("Options");
+        GUILayout.FlexibleSpace();
+        GUILayout.EndHorizontal();
+        GUILayout.Box("global volume: " + string.Format("{0:0.00}", AudioListener.volume), GUILayout.Width(230));
+        AudioListener.volume = GUILayout.HorizontalSlider(AudioListener.volume, 0.0f, 1.0f);
+        GUILayout.BeginHorizontal();
+        GUILayout.FlexibleSpace();
+        if (GUILayout.Button("Return", GUILayout.Width(100))) {
+            currentGUI = menuGUI;
+            audio.PlayOneShot(buttonPressSound);
+        }
+        GUILayout.FlexibleSpace();
+        GUILayout.EndHorizontal();
+        GUILayout.EndArea();
+    }
+
+    void CreditsGUI() {
+        GUI.skin = Ourskin;
+        GUI.DrawTexture(new Rect(Screen.width / 2 - 176, 35, 352, 148), Resources.Load("Textures/redrover") as Texture);
+        GUILayout.BeginArea(new Rect(Screen.width / 2 - 100, Screen.height / 2 - 100, 200, 350));
+        GUILayout.BeginHorizontal();
+        GUILayout.FlexibleSpace();
+        GUILayout.Box("Credits");
+        GUILayout.FlexibleSpace();
+        GUILayout.EndHorizontal();
+
+        GUILayout.FlexibleSpace();
+        GUILayout.BeginHorizontal();
+        GUILayout.FlexibleSpace();
+        GUILayout.Box("Art");
+        GUILayout.FlexibleSpace();
+        GUILayout.EndHorizontal();
+        GUILayout.BeginHorizontal();
+        GUILayout.FlexibleSpace();
+        GUILayout.Box("Richard Vallejos");
+        GUILayout.FlexibleSpace();
+        GUILayout.EndHorizontal();
+        GUILayout.BeginHorizontal();
+        GUILayout.FlexibleSpace();
+        GUILayout.Box("Ruben Telles");
+        GUILayout.FlexibleSpace();
+        GUILayout.EndHorizontal();
+
+        GUILayout.FlexibleSpace();
+        GUILayout.BeginHorizontal();
+        GUILayout.FlexibleSpace();
+        GUILayout.Box("Programming");
+        GUILayout.FlexibleSpace();
+        GUILayout.EndHorizontal();
+        GUILayout.BeginHorizontal();
+        GUILayout.FlexibleSpace();
+        GUILayout.Box("Brian Gabin");
+        GUILayout.FlexibleSpace();
+        GUILayout.EndHorizontal();
+        
+        GUILayout.FlexibleSpace();
+        GUILayout.BeginHorizontal();
+        GUILayout.FlexibleSpace();
+        GUILayout.Box("Music");
+        GUILayout.FlexibleSpace();
+        GUILayout.EndHorizontal();
+        GUILayout.BeginHorizontal();
+        GUILayout.FlexibleSpace();
+        GUILayout.Box("Kevin McLeod");
+        GUILayout.FlexibleSpace();
+        GUILayout.EndHorizontal();
+        GUILayout.BeginHorizontal();
+        GUILayout.FlexibleSpace();
+        GUILayout.Box("incompetech.com");
+        GUILayout.FlexibleSpace();
+        GUILayout.EndHorizontal();
+        GUILayout.FlexibleSpace();
+        if (GUILayout.Button("Return")) {
+            currentGUI = menuGUI;
+            audio.PlayOneShot(buttonPressSound);
         }
         GUILayout.EndArea();
     }
@@ -89,46 +363,90 @@ public class GUISystem : MonoBehaviour {
     void ColonyGUI() {
         GUI.skin = Ourskin;
 
+        List<Rect> baseRects = new List<Rect>();
+
         // Draw Background
         GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Resources.Load("Textures/marsbackground_02") as Texture);
 
+        GUI.Box(new Rect(0, 0, 230, 100), GUIContent.none);
+        GUI.Label(new Rect(0 + 40, 8, 220, 30), "IRON: " + colonyManager.iron.ToString());
+        GUI.Label(new Rect(0 + 40, 28, 220, 30), "MONEY: $" + colonyManager.money.ToString());
+        GUI.Label(new Rect(0 + 40, 48, 220, 30), "IRON SOLD: " + colonyManager.ironSoldSinceAudit.ToString());
+        GUI.Label(new Rect(0 + 40, 68, 240, 30), "AUDIT GOAL: " + colonyManager.auditGoal.ToString());
 
-        GUILayout.BeginVertical();
-        GUILayout.BeginHorizontal();
-        GUILayout.Box("Iron: " + colonyManager.iron);
-        GUILayout.Box("Money: " + colonyManager.money);
-        GUILayout.EndHorizontal();
-        GUILayout.BeginHorizontal();
+        GUI.Box(new Rect(Screen.width - 230, 0, 230, 130), GUIContent.none);
+        GUI.Box(new Rect(Screen.width - 230 + 15, 30, 200, 40), GUIContent.none);
+        GUI.Box(new Rect(Screen.width - 230 + 15, 80, 200, 40), GUIContent.none);
+        GUI.Label(new Rect(Screen.width - 230 + 115 - 25, 5, 80, 30), "timers");
 
-        // Temporary Build Button
-        // TODO: Remove temporary build button when no longer needed.
-        GUI.enabled = colonyManager.money >= colonyManager.costs[ColonyManager.ShopItems.miningBase];
-        if (GUILayout.Button("Buy Mining Base")) {
-            colonyManager.AddBase();
+        GUI.color = Color.Lerp(Color.red, Color.green, (colonyManager.currentSpaceElevatorTime / colonyManager.spaceElevatorTime));
+        GUI.Box(new Rect(Screen.width - 230 + 15 + 6, 30 + 6, (colonyManager.currentSpaceElevatorTime / colonyManager.spaceElevatorTime) * 188, 28), GUIContent.none, "ProgressBar");
+        GUI.color = Color.white;
+        GUI.Label(new Rect(Screen.width - 230 + 66, 38, 125, 40), "trade ship");
+
+        GUI.color = Color.Lerp(Color.red, Color.green, (colonyManager.currentAuditTime / colonyManager.auditTime));
+        GUI.Box(new Rect(Screen.width - 230 + 15 + 6, 80 + 6, (colonyManager.currentAuditTime / colonyManager.auditTime) * 188, 28), GUIContent.none, "ProgressBar");
+        GUI.color = Color.white;
+        GUI.Label(new Rect(Screen.width - 230 + 94, 88, 125, 40), "audit");
+
+        if (GUI.Button(new Rect(Screen.width - 50, Screen.height - 30, 50, 30), "Menu")) {
+            Time.timeScale = 0;
+            pausedGUI = currentGUI;
+            currentGUI = PauseMenuGUI;
+            audio.PlayOneShot(buttonPressSound);
         }
-        GUI.enabled = true;
-
-        GUILayout.EndHorizontal();
-        GUILayout.EndVertical();
 
         GUI.DrawTexture(new Rect(0, -120, 960, 540), Resources.Load("Textures/spaceElevator") as Texture);
 
-        for (int i = 0; i < colonyManager.bases.Count; i++) {
-            string text = "Mining";
-            if (colonyManager.bases[i].running) {
-                text += "\nRunning";
-                GUI.color = Color.green;
+        Texture drillTexture = Resources.Load("Textures/bucketwheelexcavator_small") as Texture;
+        baseRects.Add(new Rect(30, 230, drillTexture.width, drillTexture.height));
+        baseRects.Add(new Rect(190, 350, drillTexture.width, drillTexture.height));
+        baseRects.Add(new Rect(380, 360, drillTexture.width, drillTexture.height));
+        baseRects.Add(new Rect(560, 350, drillTexture.width, drillTexture.height));
+        baseRects.Add(new Rect(740, 230, drillTexture.width, drillTexture.height));
+
+        for (int i = 0; i < baseRects.Count; i++) {
+            if (i < colonyManager.bases.Count) {
+                if (colonyManager.bases[i].running) {
+                    GUI.color = Color.green;
+                    GUI.Label(new Rect(baseRects[i].x + 60, baseRects[i].y + 100, 200, 80), "running");
+                    GUI.DrawTexture(baseRects[i], drillTexture);
+                }
+                else {
+                    GUI.color = Color.red;
+                    GUI.Label(new Rect(baseRects[i].x + 60, baseRects[i].y + 100, 200, 80), "stopped");
+                    GUI.DrawTexture(baseRects[i], drillTexture);
+                }
+            }
+            else if (i == colonyManager.bases.Count) {
+                GUI.color = Color.white;
+                GUI.Label(new Rect(baseRects[i].x + 40, baseRects[i].y + 100, 200, 80), "click to buy\n$" + colonyManager.costs[ColonyManager.ShopItems.miningBase].ToString());
+                GUI.color = new Color(1f, 1f, 1f, 0.5f);
+                GUI.DrawTexture(baseRects[i], drillTexture);
             }
             else {
-                text += "\nStopped";
-                GUI.color = Color.red;
+                GUI.color = new Color(1f, 1f, 1f, 0.5f);
+                GUI.DrawTexture(baseRects[i], drillTexture);
             }
-            if (GUI.Button(new Rect(100 * (i + 1), 400, 100, 100), text)) {
-                currentBase = colonyManager.bases[i];
-                currentGUI = BaseGUI;
-                break;
+        }
+        GUI.color = Color.white;
+
+        if (Event.current.type == EventType.mouseDown) {
+            for (int i = 0; i < baseRects.Count; i++) {
+                if (baseRects[i].Contains(Event.current.mousePosition)) {
+                    if (i < colonyManager.bases.Count) {
+                        currentBase = colonyManager.bases[i];
+                        currentGUI = BaseGUI;
+                        audio.PlayOneShot(buttonPressSound);
+                    }
+                    else if(i == colonyManager.bases.Count) {
+                        if (colonyManager.money >= colonyManager.costs[ColonyManager.ShopItems.miningBase]) {
+                            colonyManager.AddBase();
+                            audio.PlayOneShot(buttonPressSound);
+                        }
+                    }
+                }
             }
-            GUI.color = Color.white;
         }
     }
 
@@ -160,68 +478,121 @@ public class GUISystem : MonoBehaviour {
                 GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Resources.Load("Textures/level5") as Texture);
                 break;
         }
-
-        /*
-        // Tabs at the top showing various info
-        GUI.Box(new Rect(2, 2, 240, 40), GUIContent.none);
-        GUILayout.BeginArea(new Rect(20, 14, 220, 40));
-        GUILayout.BeginHorizontal();
-        GUILayout.Label("IRON: " + colonyManager.iron.ToString());
-        GUILayout.Label("MONEY: $" + colonyManager.money.ToString());
-        GUILayout.EndHorizontal();
-        GUILayout.EndArea();
-
-        GUI.Box(new Rect(255, 0, 120, 30), GUIContent.none);
-        GUI.color = Color.Lerp(Color.red, Color.green, (colonyManager.currentSpaceElevatorTime / colonyManager.spaceElevatorTime));
-        GUI.Box(new Rect(260, 10, (colonyManager.currentSpaceElevatorTime / colonyManager.spaceElevatorTime) * 100, 20), GUIContent.none, "ProgressBar");
-        GUI.color = Color.white;
-        GUI.Label(new Rect(260 + 50 - 60, 20, 120, 40), colonyManager.currentSpaceElevatorTime.ToString());
-
-        GUI.color = Color.Lerp(Color.red, Color.green, (colonyManager.currentAuditTime / colonyManager.auditTime));
-        GUI.Box(new Rect(370, 10, (colonyManager.currentAuditTime / colonyManager.auditTime) * 100, 20), GUIContent.none, "ProgressBar");
-        GUI.color = Color.white;
-
-        GUILayout.BeginArea(new Rect(Screen.width / 2 - 50, 15, 100, 40));
-        GUILayout.BeginHorizontal();
-        if (!currentBase.running && !currentBase.crashed) {
-            GUI.enabled = !currentBase.crashed;
-            if (GUILayout.Button("Start")) {
-                currentBase.StartSim();
-                if (!colonyManager.running) colonyManager.StartSim();
-            }
-            GUI.enabled = true;
-        }
-        else if(currentBase.running) {
-            if (GUILayout.Button("Stop")) {
-                currentBase.StopSim();
-                currentBase.ResetBoard();
-            }
-        }
-        else {
-            if (GUILayout.Button("Reset")) {
-                currentBase.ResetBoard();
-            }
-        }
-        GUI.enabled = currentBase.crashed;
-
-        GUI.enabled = true;
-        GUILayout.EndHorizontal();
-        GUILayout.EndArea();
-        */
          
         // Context Panel
         if (currentBase.selectedRover == null) {
-            GUI.Box(new Rect(Screen.width - 260, 10, 250, 520), "Buildings");
-            //rects[ButtonType.drill] = new Rect(Screen.width - 260 + 250 / 2 - 132 / 2, 30, 128, 82.286f);
-            //rects[ButtonType.refinery] = new Rect(Screen.width - 260 + 250 / 2 - 132 / 2, 30 + 132 + 20, 112, 80);
-            rects[ButtonType.rover] = new Rect(Screen.width - 260 + 250 / 2 - 16, 30 + 264 + 40, 32, 32);
-
-            foreach (KeyValuePair<ButtonType, Rect> entry in rects) {
-                GUI.DrawTexture(entry.Value, buttonTextures[entry.Key]);
+            string title = "";
+            switch (currentBase.baseNumber) {
+                case MarsBase.BaseNumber.baseOne:
+                    title = "alpha";
+                    break;
+                case MarsBase.BaseNumber.baseTwo:
+                    title = "beta";
+                    break;
+                case MarsBase.BaseNumber.baseThree:
+                    title = "gamma";
+                    break;
+                case MarsBase.BaseNumber.baseFour:
+                    title = "delta";
+                    break;
+                case MarsBase.BaseNumber.baseFive:
+                    title = "epsilon";
+                    break;
             }
+            GUI.Box(new Rect(Screen.width - 260, 10, 250, 520), "mining base " + title);
+            rects[ButtonType.rover] = new Rect(Screen.width - 260 + 250 / 2 - 15 + 30, 30 + 264 + 100, 30, 30);
+
+            GUI.skin = null;
+            GUI.Box(new Rect(Screen.width - 250, 50, 230, 100), GUIContent.none);
+            GUI.Box(new Rect(Screen.width - 250, 170, 230, 130), GUIContent.none);
+            GUI.Box(new Rect(Screen.width - 250, 330, 230, 120), GUIContent.none);
+            GUI.skin = Ourskin;
+            //GUI.Label(new Rect(Screen.width - 250 + 115 - 25, 55, 80, 30), "stats");
+            GUI.Label(new Rect(Screen.width - 250 + 40, 58, 220, 30), "IRON: " + colonyManager.iron.ToString());
+            GUI.Label(new Rect(Screen.width - 250 + 40, 78, 220, 30), "MONEY: $" + colonyManager.money.ToString());
+            GUI.Label(new Rect(Screen.width - 250 + 40, 98, 220, 30), "IRON SOLD: " + colonyManager.ironSoldSinceAudit.ToString());
+            GUI.Label(new Rect(Screen.width - 250 + 40, 118, 240, 30), "AUDIT GOAL: " + colonyManager.auditGoal.ToString());
+
+            if (currentBase.selectedBuilding == null) {
+                GUI.Label(new Rect(Screen.width - 250 + 30, 360, 300, 60), "buy rover\n$" + colonyManager.costs[ColonyManager.ShopItems.rover].ToString());
+                if (colonyManager.money < colonyManager.costs[ColonyManager.ShopItems.rover])
+                    GUI.color = new Color(1f, 1f, 1f, 0.5f);
+                GUI.DrawTexture(rects[ButtonType.rover], buttonTextures[ButtonType.rover]);
+                GUI.color = Color.white;
+            }
+            else {
+                if (currentBase.selectedBuilding.buildingType == MarsBase.Building.BuildingType.mine) {
+                    Texture drillTex;
+                    if(currentBase.selectedBuilding.buildingLevel != 3)
+                        drillTex = drillTextures[currentBase.selectedBuilding.buildingLevel + 1];
+                    else
+                        drillTex = drillTextures[currentBase.selectedBuilding.buildingLevel];
+                    Rect bRect = new Rect(Screen.width - 245, 335, drillTex.width, drillTex.height);
+                    GUI.DrawTexture(bRect, drillTex);
+                }
+                else if (currentBase.selectedBuilding.buildingType == MarsBase.Building.BuildingType.processingPlant) {
+                    Texture refineryTex;
+                    if (currentBase.selectedBuilding.buildingLevel != 3)
+                        refineryTex = refineryTextures[currentBase.selectedBuilding.buildingLevel + 1];
+                    else
+                        refineryTex = refineryTextures[currentBase.selectedBuilding.buildingLevel];
+                    Rect bRect = new Rect(Screen.width - 235, 350, refineryTex.width, refineryTex.height);
+                    GUI.DrawTexture(bRect, refineryTex);
+                }
+                int cost = 0;
+                if (currentBase.selectedBuilding.buildingLevel == 1) cost = colonyManager.costs[ColonyManager.ShopItems.firstUpgrade];
+                else if (currentBase.selectedBuilding.buildingLevel == 2) cost = colonyManager.costs[ColonyManager.ShopItems.secondUpgrade];
+
+                GUI.Label(new Rect(Screen.width - 90, 390, 80, 30), ((cost == 0) ? "" : "$" + cost.ToString()));
+
+                GUI.enabled = (currentBase.selectedBuilding.buildingLevel < 3 && colonyManager.money >= cost);
+                if (GUI.Button(new Rect(Screen.width - 110, 420, 84, 24), "Upgrade")) {
+                    currentBase.selectedBuilding.buildingLevel++;
+                }
+                GUI.enabled = true;
+            }
+
+            GUI.Box(new Rect(Screen.width - 260 + 25, 200, 200, 40), GUIContent.none);
+            GUI.Box(new Rect(Screen.width - 260 + 25, 250, 200, 40), GUIContent.none);
+            GUI.Label(new Rect(Screen.width - 250 + 115 - 25, 170, 80, 30), "timers");
+
+            GUI.color = Color.Lerp(Color.red, Color.green, (colonyManager.currentSpaceElevatorTime / colonyManager.spaceElevatorTime));
+            GUI.Box(new Rect(Screen.width - 260 + 25 + 6, 200 + 6, (colonyManager.currentSpaceElevatorTime / colonyManager.spaceElevatorTime) * 188, 28), GUIContent.none, "ProgressBar");
+            GUI.color = Color.white;
+            GUI.Label(new Rect(Screen.width - 260 + 76, 208, 125, 40), "trade ship");
+
+            GUI.color = Color.Lerp(Color.red, Color.green, (colonyManager.currentAuditTime / colonyManager.auditTime));
+            GUI.Box(new Rect(Screen.width - 260 + 25 + 6, 250 + 6, (colonyManager.currentAuditTime / colonyManager.auditTime) * 188, 28), GUIContent.none, "ProgressBar");
+            GUI.color = Color.white;
+            GUI.Label(new Rect(Screen.width - 260 + 104, 258, 125, 40), "audit");
+
+            GUILayout.BeginArea(new Rect(Screen.width - 260 + 125 - 50, Screen.height - 130, 100, 30));
+            if (!currentBase.running && !currentBase.crashed) {
+                GUI.enabled = !currentBase.crashed;
+                if (GUILayout.Button("start")) {
+                    currentBase.StartSim();
+                    if (!colonyManager.running) colonyManager.StartSim();
+                    audio.PlayOneShot(buttonPressSound);
+                }
+                GUI.enabled = true;
+            }
+            else if (currentBase.running) {
+                if (GUILayout.Button("stop")) {
+                    currentBase.StopSim();
+                    currentBase.ResetBoard();
+                    audio.PlayOneShot(buttonPressSound);
+                }
+            }
+            else {
+                if (GUILayout.Button("reset")) {
+                    currentBase.ResetBoard();
+                    audio.PlayOneShot(buttonPressSound);
+                }
+            }
+            GUILayout.EndArea();
         }
         else {
-            GUI.Box(new Rect(Screen.width - 260, 10, 250, 520), "Programming");
+            GUI.Box(new Rect(Screen.width - 260, 10, 250, 520), "PROGRAMMING");
             int size = 36, distance = 1, offset = 15, start = 260, yPos = 33;
             rects[ButtonType.arrowUp] = new Rect(Screen.width - start + offset, yPos, size, size);
             rects[ButtonType.arrowLeft] = new Rect(Screen.width - start + offset + size * 1 + distance * 1, yPos, size, size);
@@ -239,13 +610,47 @@ public class GUISystem : MonoBehaviour {
             GUI.Box(dropRect, GUIContent.none);
             GUI.skin = Ourskin;
 
-            GUILayout.BeginArea(new Rect(Screen.width - 185, 495, 100, 40));
+            GUILayout.BeginArea(new Rect(Screen.width - 235, 495, 200, 40));
             GUILayout.BeginHorizontal();
+            Ourskin.GetStyle("Button").fontSize = 14;
+            GUI.enabled = (!currentBase.running && !currentBase.crashed);
+            if (GUILayout.Button("rotate")) {
+                switch (currentBase.selectedRover.direction) {
+                    case MarsBase.Direction.north:
+                        currentBase.selectedRover.direction = MarsBase.Direction.west;
+                        currentBase.selectedRover.startDirection = MarsBase.Direction.west;
+                        break;
+                    case MarsBase.Direction.east:
+                        currentBase.selectedRover.direction = MarsBase.Direction.north;
+                        currentBase.selectedRover.startDirection = MarsBase.Direction.north;
+                        break;
+                    case MarsBase.Direction.west:
+                        currentBase.selectedRover.direction = MarsBase.Direction.south;
+                        currentBase.selectedRover.startDirection = MarsBase.Direction.south;
+                        break;
+                    case MarsBase.Direction.south:
+                        currentBase.selectedRover.direction = MarsBase.Direction.east;
+                        currentBase.selectedRover.startDirection = MarsBase.Direction.east;
+                        break;
+                }
+                audio.PlayOneShot(buttonPressSound);
+            }
             GUI.enabled = currentBase.selectedRover.actionsSize > 0 && !currentBase.running && !currentBase.crashed;
-            if (GUILayout.Button("Clear")) {
+            if (GUILayout.Button("clear")) {
                 currentBase.selectedRover.ClearActions();
+                audio.PlayOneShot(buttonPressSound);
             }
             GUI.enabled = true;
+            GUI.enabled = (!currentBase.running && !currentBase.crashed);
+            if (GUILayout.Button("sell")) {
+                colonyManager.SellItem(ColonyManager.SellItems.rover);
+                currentBase.RemoveRover(currentBase.selectedRover);
+                currentBase.selectedRover = null;
+                audio.PlayOneShot(buttonPressSound);
+                return;
+            }
+            GUI.enabled = true;
+            Ourskin.GetStyle("Button").fontSize = 0;
             GUILayout.EndHorizontal();
             GUILayout.EndArea();
 
@@ -282,22 +687,20 @@ public class GUISystem : MonoBehaviour {
         }
 
         // Buttons to change current scene or UI
-        GUILayout.BeginArea(new Rect(Screen.width - 260, Screen.height - 60, 250, 50));
-        GUILayout.BeginHorizontal();
-        GUI.enabled = false;
-        GUILayout.Button("Main Menu");
-        GUILayout.Button("Pause");
-        GUI.enabled = true;
-        GUILayout.EndHorizontal();
+        GUILayout.BeginArea(new Rect(Screen.width - 260, Screen.height - 64, 250, 30));
         GUILayout.BeginHorizontal();
         if (GUILayout.Button("Main Base")) {
             currentBase = null;
             currentGUI = ColonyGUI;
+            audio.PlayOneShot(buttonPressSound);
             return;
         }
-        GUI.enabled = false;
-        GUILayout.Button("Options");
-        GUI.enabled = true;
+        if (GUILayout.Button("Menu")) {
+            Time.timeScale = 0;
+            pausedGUI = currentGUI;
+            currentGUI = PauseMenuGUI;
+            audio.PlayOneShot(buttonPressSound);
+        }
         GUILayout.EndHorizontal();
         GUILayout.EndArea();
 
@@ -312,9 +715,18 @@ public class GUISystem : MonoBehaviour {
                 if (!dragging && Event.current.type == EventType.mouseDown) {
                     foreach (KeyValuePair<ButtonType, Rect> entry in rects) {
                         if (entry.Value.Contains(Event.current.mousePosition)) {
-                            dragging = true;
-                            draggingButton = entry.Key;
-                            break;
+                            if (entry.Key == ButtonType.rover) {
+                                if (colonyManager.money >= colonyManager.costs[ColonyManager.ShopItems.rover]) {
+                                    dragging = true;
+                                    draggingButton = entry.Key;
+                                    break;
+                                }
+                            }
+                            else {
+                                dragging = true;
+                                draggingButton = entry.Key;
+                                break;
+                            }
                         }
                     }
 
@@ -322,6 +734,7 @@ public class GUISystem : MonoBehaviour {
                         for (int i = 0; i < actionRects.Count; i++) {
                             if (actionRects[i].Contains(Event.current.mousePosition)) {
                                 currentBase.selectedRover.RemoveAction(i);
+                                audio.PlayOneShot(dragClick);
                                 break;
                             }
                         }
@@ -330,8 +743,20 @@ public class GUISystem : MonoBehaviour {
                 else if (dragging && Event.current.type == EventType.mouseUp) {
                     dragging = false;
                     if (currentBase.selectedRover != null) {
-                        if (dropRect.Contains(Event.current.mousePosition)) {
-                            currentBase.selectedRover.AddAction(buttonToAction[draggingButton]);
+                        bool missedActions = true;
+                        for (int i = 0; i < actionRects.Count; i++) {
+                            if (actionRects[i].Contains(Event.current.mousePosition)) {
+                                currentBase.selectedRover.AddActionAt(buttonToAction[draggingButton], i);
+                                audio.PlayOneShot(dragClick);
+                                missedActions = false;
+                                break;
+                            }
+                        }
+                        if (missedActions) {
+                            if (dropRect.Contains(Event.current.mousePosition)) {
+                                currentBase.selectedRover.AddAction(buttonToAction[draggingButton]);
+                                audio.PlayOneShot(dragClick);
+                            }
                         }
                     }
                     else {
@@ -341,8 +766,12 @@ public class GUISystem : MonoBehaviour {
                         int y = Mathf.FloorToInt(pos.y / 30) + 1;
 
                         if (x >= 0 && x < MarsBase.GRID_WIDTH && y >= 0 && y <= MarsBase.GRID_HEIGHT) {
-                            if (currentBase.board[x, MarsBase.GRID_HEIGHT - y].tileType == MarsBase.GridTile.TileType.open)
+                            if (currentBase.board[x, MarsBase.GRID_HEIGHT - y].tileType == MarsBase.GridTile.TileType.open) {
                                 currentBase.BuyPart(draggingButton, x, MarsBase.GRID_HEIGHT - y);
+                                // Assume it's a rover for now
+                                colonyManager.BuyItem(ColonyManager.ShopItems.rover);
+                                audio.PlayOneShot(dragClick);
+                            }
                         }
                     }
                 }
@@ -361,8 +790,9 @@ public class GUISystem : MonoBehaviour {
     void DrawBase() {
         //GUI.skin = Ourskin;
         Dictionary<Rect, MarsBase.Rover> roverRects = new Dictionary<Rect, MarsBase.Rover>();
+        Dictionary<Rect, MarsBase.Building> buildingRects = new Dictionary<Rect, MarsBase.Building>();
 
-        GUILayout.BeginArea(new Rect(-1, -1, 691, 600));
+        GUILayout.BeginArea(new Rect(-1, -1, 960, 600));
         // Iterate through the grid
         for (int j = MarsBase.GRID_HEIGHT - 1; j >= 0; j--) {
             GUILayout.BeginHorizontal();
@@ -378,15 +808,23 @@ public class GUISystem : MonoBehaviour {
                             MarsBase.Building building = currentBase.board[i, j].building;
                             if (building.buildingType == MarsBase.Building.BuildingType.mine) {
                                 Texture drillTex = drillTextures[building.buildingLevel];
-                                GUI.DrawTexture(new Rect((30 * (i - 4)) + (180 - drillTex.width) / 2, (30 * (MarsBase.GRID_HEIGHT - j - 3)) + (120 - drillTex.height) / 2, drillTex.width, drillTex.height), drillTex);
+                                Rect newBuildingRect =new Rect((30 * (i - 4)) + (180 - drillTex.width) / 2, (30 * (MarsBase.GRID_HEIGHT - j - 3)) + (120 - drillTex.height) / 2, drillTex.width, drillTex.height);
+                                buildingRects[newBuildingRect] = building;
+                                GUI.DrawTexture(newBuildingRect, drillTex);
                             }
                             else if (building.buildingType == MarsBase.Building.BuildingType.processingPlant) {
                                 Texture refineryTex = refineryTextures[building.buildingLevel];
-                                GUI.DrawTexture(new Rect((30 * (i - 3)) + (120 - refineryTex.width) / 2, (30 * (MarsBase.GRID_HEIGHT - j - 2)) + (90 - refineryTex.height) / 2 + 5, refineryTex.width, refineryTex.height), refineryTex);
+                                Rect newBuildingRect = new Rect((30 * (i - 3)) + (120 - refineryTex.width) / 2, (30 * (MarsBase.GRID_HEIGHT - j - 3)) + (90 - refineryTex.height) / 2 + 5, refineryTex.width, refineryTex.height);
+                                buildingRects[newBuildingRect] = building;
+                                GUI.DrawTexture(newBuildingRect, refineryTex);
                             }
                             else if (building.buildingType == MarsBase.Building.BuildingType.tramStation) {
                                 Texture tramTexture = Resources.Load("Textures/tram_small") as Texture;
-                                GUI.DrawTexture(new Rect((30 * (i - 1)) + 10, (30 * (MarsBase.GRID_HEIGHT - j - 1)), tramTexture.width, tramTexture.height), tramTexture);
+                                Texture tramCarTexture = Resources.Load("Textures/TramCar_Empty") as Texture;
+                                Rect newBuildingRect = new Rect((30 * (i - 1)) + 10, (30 * (MarsBase.GRID_HEIGHT - j - 1)), tramTexture.width, tramTexture.height);
+                                //buildingRects[newBuildingRect] = building;
+                                GUI.DrawTexture(newBuildingRect, tramTexture);
+                                GUI.DrawTexture(new Rect((30 * (i - 1)) + 6 + 26, (30 * (MarsBase.GRID_HEIGHT - j - 1)) + 22, tramCarTexture.width, tramCarTexture.height), tramCarTexture);
                             }
                         }
                         break;    
@@ -450,9 +888,21 @@ public class GUISystem : MonoBehaviour {
         if (Event.current.type == EventType.mouseDown) {
             foreach (KeyValuePair<Rect, MarsBase.Rover> entry in roverRects) {
                 if (entry.Key.Contains(Event.current.mousePosition)) {
-                    if (currentBase.selectedRover != entry.Value) currentBase.selectedRover = entry.Value;
+                    if (currentBase.selectedRover != entry.Value) {
+                        currentBase.selectedRover = entry.Value;
+                        currentBase.selectedBuilding = null;
+                    }
                     else currentBase.selectedRover = null;
                     break;
+                }
+            }
+            foreach (KeyValuePair<Rect, MarsBase.Building> entry in buildingRects) {
+                if (entry.Key.Contains(Event.current.mousePosition)) {
+                    if (currentBase.selectedBuilding != entry.Value) {
+                        currentBase.selectedBuilding = entry.Value;
+                        currentBase.selectedRover = null;
+                    }
+                    else currentBase.selectedBuilding = null;
                 }
             }
         }

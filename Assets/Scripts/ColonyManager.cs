@@ -6,7 +6,8 @@ using System.Collections.Generic;
 public class ColonyManager : MonoBehaviour {
 
     // Public Variables
-    public enum ShopItems { miningBase }
+    public enum ShopItems { miningBase, rover, firstUpgrade, secondUpgrade }
+    public enum SellItems { rover }
 
     private List<MarsBase> m_bases;
 
@@ -14,20 +15,37 @@ public class ColonyManager : MonoBehaviour {
     private int m_iron;
     private int m_money;
     private bool m_running = false;
+    private int m_ironSinceAudit;
+    private int m_lastAuditAmount;
+    private int m_auditGoal;
+    private int m_timesAudited;
+    private int m_totalIronSold;
+    private int m_strikes;
+    private int m_lastAuitGoal;
     private Dictionary<ShopItems, int> m_costs;
+    private Dictionary<SellItems, int> m_sell;
 
     // Timer Events Variables
     public float currentSpaceElevatorTime;
     public float spaceElevatorTime = 60f;
     public float currentAuditTime;
     public float auditTime = 240f;
+    public bool auditing = false;
 
     // Accessors
     public int iron { get { return m_iron; } }
     public int money { get { return m_money; } }
+    public int timesAudited { get { return m_timesAudited; } }
+    public int ironSoldSinceAudit { get { return m_ironSinceAudit; } }
+    public int totalIronSold { get { return m_totalIronSold; } }
+    public int strikes { get { return m_strikes; } }
+    public int lastAuditGoal { get { return m_lastAuitGoal; } }
+    public int auditGoal { get { return m_auditGoal; } }
+    public int lastAuditAmount { get { return m_lastAuditAmount; } }
     public bool running { get { return m_running; } }
     public List<MarsBase> bases { get { return m_bases; } }
     public Dictionary<ShopItems, int> costs { get { return m_costs; } }
+    public Dictionary<SellItems, int> sellPrice { get { return m_sell; } }
 
     // Use this for initialization
     void Start() {
@@ -35,31 +53,68 @@ public class ColonyManager : MonoBehaviour {
         currentAuditTime = auditTime;
         m_bases = new List<MarsBase>();
         m_iron = 0;
-        m_money = 500;
+        m_money = 250;
+        m_ironSinceAudit = 0;
+        m_lastAuditAmount = 0;
+        m_auditGoal = 0;
+        m_timesAudited = 0;
+        m_lastAuitGoal = 0;
+        m_totalIronSold = 0;
+        m_strikes = 0;
         m_costs = new Dictionary<ShopItems, int>();
-        m_costs.Add(ShopItems.miningBase, 50);
+        m_costs[ShopItems.miningBase] = 150;
+        m_costs[ShopItems.rover] = 50;
+        m_costs[ShopItems.firstUpgrade] = 100;
+        m_costs[ShopItems.secondUpgrade] = 200;
+
+        m_sell = new Dictionary<SellItems, int>();
+        m_sell[SellItems.rover] = 25;
     }
 
     void Update() {
-        currentSpaceElevatorTime -= Time.deltaTime;
-        if (currentSpaceElevatorTime <= 0) {
-            SpaceElevatorArrived();
-        }
+        if (running) {
+            currentSpaceElevatorTime -= Time.deltaTime;
+            if (currentSpaceElevatorTime <= 0) {
+                SpaceElevatorArrived();
+            }
 
-        currentAuditTime -= Time.deltaTime;
-        if (currentAuditTime <= 0) {
-            AuditInventory();
+            currentAuditTime -= Time.deltaTime;
+            if (currentAuditTime <= 0) {
+                AuditInventory();
+            }
         }
+    }
+
+    public void SellItem(SellItems item) {
+        m_money += m_sell[item];
+    }
+
+    public void BuyItem(ShopItems item) {
+        m_money -= m_costs[item];
     }
 
     private void SpaceElevatorArrived() {
         m_money += m_iron * 50;
+        m_totalIronSold += m_iron;
+        m_ironSinceAudit += m_iron;
         m_iron = 0;
         currentSpaceElevatorTime = spaceElevatorTime;
     }
 
     private void AuditInventory() {
         currentAuditTime = auditTime;
+        auditing = true;
+
+        if (m_auditGoal != 0) {
+            if (m_ironSinceAudit < m_auditGoal)
+                m_strikes++;
+        }
+
+        m_lastAuitGoal = m_auditGoal;
+        m_auditGoal = Mathf.RoundToInt(m_lastAuditAmount * 1.5f) + 1;
+        m_lastAuditAmount = m_ironSinceAudit;
+        m_ironSinceAudit = 0;
+        m_timesAudited++;
     }
 
     public void AddBase() {
@@ -98,6 +153,9 @@ public class ColonyManager : MonoBehaviour {
             }
             else if (resource == MarsBase.ResourceType.doubleRefinedIron) {
                 m_iron += 2;
+            }
+            else if (resource == MarsBase.ResourceType.tripleRefinedIron) {
+                m_iron += 3;
             }
         }
         resources.Clear();
