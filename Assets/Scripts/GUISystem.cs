@@ -874,7 +874,7 @@ public class GUISystem : MonoBehaviour {
                             Rect iconRect = new Rect(newRoverRect.x, newRoverRect.y, 16, 16);
                             GUI.DrawTexture(iconRect, Resources.Load("Textures/rock_icon") as Texture);
                         }
-                        else if (rover.resource == MarsBase.ResourceType.refinedIron) {
+                        else if (rover.resource == MarsBase.ResourceType.refinedIron || rover.resource == MarsBase.ResourceType.doubleRefinedIron || rover.resource == MarsBase.ResourceType.tripleRefinedIron) {
                             Rect iconRect = new Rect(newRoverRect.x, newRoverRect.y, 16, 16);
                             GUI.DrawTexture(iconRect, Resources.Load("Textures/iron_icon") as Texture);
                         }

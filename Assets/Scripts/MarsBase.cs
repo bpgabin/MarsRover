@@ -81,6 +81,8 @@ public class MarsBase {
         }
     }
 
+    #region Buildings
+
     public abstract class Building {
         // Public Variables
         public enum BuildingType { mine, processingPlant, tramStation }
@@ -224,6 +226,8 @@ public class MarsBase {
             processedIron = 0;
         }
     }
+
+    #endregion
 
     // Rover class that tracks rover board piece information.
     // Includes the action list associated with that rover.
@@ -394,6 +398,279 @@ public class MarsBase {
                 break;
         }
     }
+
+    void PlaceTram(int x, int y) {
+        baseGrid[x, y].tileType = GridTile.TileType.wall;
+        baseGrid[x + 1, y].building = new TramBuilding(tramLaunchedFunction);
+        baseGrid[x + 1, y].buildingSprite = true;
+        baseGrid[x + 2, y].tileType = GridTile.TileType.wall;
+        baseGrid[x, y - 1].tileType = GridTile.TileType.wall;
+        baseGrid[x + 1, y - 1].tileType = GridTile.TileType.wall;
+        baseGrid[x + 2, y - 1].tileType = GridTile.TileType.wall;
+    }
+
+    void PlaceDrill(int x, int y) {
+        baseGrid[x + 2, y - 1].tileType = GridTile.TileType.wall;
+        baseGrid[x + 3, y - 1].tileType = GridTile.TileType.wall;
+        baseGrid[x + 4, y - 1].tileType = GridTile.TileType.wall;
+        baseGrid[x + 2, y - 2].tileType = GridTile.TileType.wall;
+        baseGrid[x + 3, y - 2].tileType = GridTile.TileType.wall;
+        baseGrid[x + 4, y - 2].building = new MiningBuilding();
+        baseGrid[x + 4, y - 2].buildingSprite = true;
+        baseGrid[x + 2, y - 3].tileType = GridTile.TileType.wall;
+        baseGrid[x + 3, y - 3].tileType = GridTile.TileType.wall;
+        baseGrid[x + 4, y - 3].tileType = GridTile.TileType.wall;
+    }
+
+    void PlaceRefinery(int x, int y) {
+        Building refinery = new RefineryBuilding();
+        baseGrid[x, y - 1].tileType = GridTile.TileType.wall;
+        baseGrid[x + 1, y- 1].tileType = GridTile.TileType.wall;
+        baseGrid[x + 2, y - 1].tileType = GridTile.TileType.wall;
+        baseGrid[x + 3, y - 1].tileType = GridTile.TileType.wall;
+        baseGrid[x, y - 2].building = refinery;
+        baseGrid[x + 1, y - 2].tileType = GridTile.TileType.wall;
+        baseGrid[x + 2, y - 2].tileType = GridTile.TileType.wall;
+        baseGrid[x + 3, y - 2].building = refinery;
+        baseGrid[x + 3, y - 2].buildingSprite = true;
+    }
+
+    public void StartSim() {
+        m_running = true;
+    }
+
+    public void StopSim() {
+        m_running = false;
+    }
+
+    public void ResetBoard() {
+        m_crashed = false;
+
+        // Make a Duplicate
+        GridTile[,] newBaseGrid = new GridTile[GRID_WIDTH, GRID_HEIGHT];
+        for (int i = 0; i < GRID_WIDTH; i++) {
+            for (int j = 0; j < GRID_HEIGHT; j++) {
+                newBaseGrid[i, j] = baseGrid[i, j];
+            }
+        }
+
+        // Reset All Tiles
+        for (int i = 0; i < GRID_WIDTH; i++) {
+            for (int j = 0; j < GRID_HEIGHT; j++) {
+                if (baseGrid[i, j].tileType == GridTile.TileType.rover) {
+                    Rover rover = baseGrid[i, j].rover;
+                    rover.ResetRover();
+                    Vector2 startPos = rover.startPos;
+                    int x = (int)startPos.x;
+                    int y = (int)startPos.y;
+
+                    newBaseGrid[x, y] = baseGrid[i, j];
+                    if(x != i || y != j)
+                        newBaseGrid[i, j] = new GridTile(GridTile.TileType.open);
+                }
+                else if (baseGrid[i, j].tileType == GridTile.TileType.building) {
+                    baseGrid[i, j].building.Reset();
+                }
+            }
+        }
+
+        baseGrid = newBaseGrid;
+    }
+
+    void MoveTile(GridTile[,] tileGrid, int i, int j, Direction direction) {
+        bool valid = false;
+        switch (direction) {
+            case Direction.north:
+                if (j + 1 < GRID_HEIGHT) {
+                    if (tileGrid[i, j + 1].tileType == GridTile.TileType.open) {
+                        tileGrid[i, j + 1] = tileGrid[i, j];
+                        valid = true;
+                    }
+                }
+                break;
+            case Direction.east:
+                if (i + 1 < GRID_WIDTH) {
+                    if (tileGrid[i + 1, j].tileType == GridTile.TileType.open) {
+                        tileGrid[i + 1, j] = tileGrid[i, j];
+                        valid = true;
+                    }
+                }
+                break;
+            case Direction.west:
+                if (i - 1 >= 0) {
+                    if (tileGrid[i - 1, j].tileType == GridTile.TileType.open) {
+                        tileGrid[i - 1, j] = tileGrid[i, j];
+                        valid = true;
+                    }
+                }
+                break;
+            case Direction.south:
+                if (j - 1 >= 0) {
+                    if (tileGrid[i, j - 1].tileType == GridTile.TileType.open) {
+                        tileGrid[i, j - 1] = tileGrid[i, j];
+                        valid = true;
+                    }
+                }
+                break;
+        }
+        if (!valid) {
+            tileGrid[i, j].rover.crashed = true;
+            m_crashed = true;
+            StopSim();
+        }
+        else tileGrid[i, j] = new GridTile(GridTile.TileType.open);
+    }
+
+    void GrabTile(int i, int j) {
+        Rover rover = baseGrid[i, j].rover;
+        Direction direction = rover.direction;
+        switch (direction) {
+            case Direction.north:
+                break;
+            case Direction.east:
+                if (baseGrid[i + 1, j].tileType == GridTile.TileType.building) {
+                    ResourceType resource = baseGrid[i + 1, j].building.PickUp(direction);
+                    rover.resource = resource;
+                }
+                break;
+            case Direction.west:
+                if (baseGrid[i - 1, j].tileType == GridTile.TileType.building) {
+                    ResourceType resource = baseGrid[i - 1, j].building.PickUp(direction);
+                    rover.resource = resource;
+                }
+                break;
+            case Direction.south:
+                break;
+        }
+    }
+
+    void DropTile(int i, int j) {
+        Rover rover = baseGrid[i, j].rover;
+        Direction direction = rover.direction;
+        switch (direction) {
+            case Direction.north:
+                if (baseGrid[i, j + 1].tileType == GridTile.TileType.building) {
+                    if (baseGrid[i, j + 1].building.DropOff(rover.resource, direction)) {
+                        rover.resource = ResourceType.none;
+                    }
+                }
+                else if (baseGrid[i, j + 1].tileType == GridTile.TileType.rover) {
+                    Rover otherRover = baseGrid[i, j + 1].rover;
+                    if (otherRover.resource == ResourceType.none) {
+                        otherRover.resource = rover.resource;
+                        rover.resource = ResourceType.none;
+                    }
+                }
+                break;
+            case Direction.east:
+                if (baseGrid[i + 1, j].tileType == GridTile.TileType.building) {
+                    if (baseGrid[i + 1, j].building.DropOff(rover.resource, direction)) {
+                        rover.resource = ResourceType.none;
+                    }
+                }
+                else if (baseGrid[i + 1, j].tileType == GridTile.TileType.rover) {
+                    Rover otherRover = baseGrid[i + 1, j].rover;
+                    if (otherRover.resource == ResourceType.none) {
+                        otherRover.resource = rover.resource;
+                        rover.resource = ResourceType.none;
+                    }
+                }
+                break;
+            case Direction.west:
+                if (baseGrid[i - 1, j].tileType == GridTile.TileType.building) {
+                    if (baseGrid[i - i, j].building.DropOff(rover.resource, direction)) {
+                        rover.resource = ResourceType.none;
+                    }
+                }
+                else if (baseGrid[i - 1, j].tileType == GridTile.TileType.rover) {
+                    Rover otherRover = baseGrid[i - 1, j].rover;
+                    if (otherRover.resource == ResourceType.none) {
+                        otherRover.resource = rover.resource;
+                        rover.resource = ResourceType.none;
+                    }
+                }
+                break;
+            case Direction.south:
+                if (baseGrid[i, j - 1].tileType == GridTile.TileType.building) {
+                    if (baseGrid[i, j - 1].building.DropOff(rover.resource, direction)) {
+                        rover.resource = ResourceType.none;
+                    }
+                }
+                else if (baseGrid[i, j - 1].tileType == GridTile.TileType.rover) {
+                    Rover otherRover = baseGrid[i, j - 1].rover;
+                    if (otherRover.resource == ResourceType.none) {
+                        otherRover.resource = rover.resource;
+                        rover.resource = ResourceType.none;
+                    }
+                }
+                break;
+        }
+    }
+
+    public void RemoveRover(Rover rover) {
+        for (int i = 0; i < GRID_WIDTH; i++) {
+            for (int j = 0; j < GRID_HEIGHT; j++) {
+                if (baseGrid[i, j].tileType == GridTile.TileType.rover) {
+                    if (baseGrid[i, j].rover == rover) {
+                        baseGrid[i, j] = new GridTile(GridTile.TileType.open);
+                    }
+                }
+            }
+        }
+    }
+
+    public void CalculateMoves() {
+        // Generate a Copy of baseGrid
+        GridTile[,] newBaseGrid = new GridTile[GRID_WIDTH, GRID_HEIGHT];
+        for (int i = 0; i < GRID_WIDTH; i++) {
+            for (int j = 0; j < GRID_HEIGHT; j++) {
+                newBaseGrid[i, j] = baseGrid[i, j];
+            }
+        }
+
+        // Iterate through all the tiles and update the board.
+        for (int i = 0; i < GRID_WIDTH; i++) {
+            for (int j = 0; j < GRID_HEIGHT; j++) {
+                if (baseGrid[i, j].tileType == GridTile.TileType.rover) {
+                    Rover rover = baseGrid[i, j].rover;
+                    Rover.ActionType action = rover.currentAction;
+                    switch (action) {
+                        case Rover.ActionType.forward:
+                            MoveTile(newBaseGrid, i, j, rover.direction);
+                            break;
+                        case Rover.ActionType.turnRight:
+                            rover.TurnRight();
+                            break;
+                        case Rover.ActionType.turnLeft:
+                            rover.TurnLeft();
+                            break;
+                        case Rover.ActionType.grab:
+                            if (rover.resource == ResourceType.none) GrabTile(i, j);
+                            break;
+                        case Rover.ActionType.drop:
+                            if (rover.resource != ResourceType.none) DropTile(i, j);
+                            break;
+                    }
+                    if (m_running) rover.AdvanceAction();
+                }
+                else if (baseGrid[i, j].tileType == GridTile.TileType.building) {
+                    baseGrid[i, j].building.Update();
+                }
+            }
+        }
+
+        baseGrid = newBaseGrid;
+    }
+
+    public void BuyPart(GUISystem.ButtonType buttonType, int x, int y) {
+        switch (buttonType) {
+            case GUISystem.ButtonType.rover:
+                baseGrid[x, y].rover = new Rover(x, y);
+                break;
+        }
+    }
+
+    #region Levels
 
     void LevelOne() {
         // Add Tram Station
@@ -1064,300 +1341,5 @@ public class MarsBase {
         baseGrid[12, 0].tileType = GridTile.TileType.wall;
     }
 
-    void PlaceTram(int x, int y) {
-        baseGrid[x, y].tileType = GridTile.TileType.wall;
-        baseGrid[x + 1, y].building = new TramBuilding(tramLaunchedFunction);
-        baseGrid[x + 1, y].buildingSprite = true;
-        baseGrid[x + 2, y].tileType = GridTile.TileType.wall;
-        baseGrid[x, y - 1].tileType = GridTile.TileType.wall;
-        baseGrid[x + 1, y - 1].tileType = GridTile.TileType.wall;
-        baseGrid[x + 2, y - 1].tileType = GridTile.TileType.wall;
-    }
-
-    void PlaceDrill(int x, int y) {
-        //baseGrid[x, y].tileType = GridTile.TileType.wall;
-        //baseGrid[x + 1, y].tileType = GridTile.TileType.wall;
-        //baseGrid[x + 2, y].tileType = GridTile.TileType.wall;
-        //baseGrid[x + 3, y].tileType = GridTile.TileType.wall;
-        //baseGrid[x + 4, y].tileType = GridTile.TileType.wall;
-        //baseGrid[x + 5, y].tileType = GridTile.TileType.wall;
-
-        //baseGrid[x, y - 1].tileType = GridTile.TileType.wall;
-        //baseGrid[x + 1, y - 1].tileType = GridTile.TileType.wall;
-        baseGrid[x + 2, y - 1].tileType = GridTile.TileType.wall;
-        baseGrid[x + 3, y - 1].tileType = GridTile.TileType.wall;
-        baseGrid[x + 4, y - 1].tileType = GridTile.TileType.wall;
-        //baseGrid[x + 5, y - 1].tileType = GridTile.TileType.wall;
-
-        //baseGrid[x, y - 2].tileType = GridTile.TileType.wall;
-        //baseGrid[x + 1, y - 2].tileType = GridTile.TileType.wall;
-        baseGrid[x + 2, y - 2].tileType = GridTile.TileType.wall;
-        baseGrid[x + 3, y - 2].tileType = GridTile.TileType.wall;
-        baseGrid[x + 4, y - 2].building = new MiningBuilding();
-        baseGrid[x + 4, y - 2].buildingSprite = true;
-        //baseGrid[x + 5, y - 2].tileType = GridTile.TileType.wall;
-
-        //baseGrid[x, y - 3].tileType = GridTile.TileType.wall;
-        //baseGrid[x + 1, y - 3].tileType = GridTile.TileType.wall;
-        baseGrid[x + 2, y - 3].tileType = GridTile.TileType.wall;
-        baseGrid[x + 3, y - 3].tileType = GridTile.TileType.wall;
-        baseGrid[x + 4, y - 3].tileType = GridTile.TileType.wall;
-        //baseGrid[x + 5, y - 3].building = new MiningBuilding();
-        //baseGrid[x + 5, y - 3].buildingSprite = true;
-    }
-
-    void PlaceRefinery(int x, int y) {
-        //baseGrid[x, y].tileType = GridTile.TileType.wall;
-        //baseGrid[x + 1, y].tileType = GridTile.TileType.wall;
-        //baseGrid[x + 2, y].tileType = GridTile.TileType.wall;
-        //baseGrid[x + 3, y].tileType = GridTile.TileType.wall;
-
-        Building refinery = new RefineryBuilding();
-
-        baseGrid[x, y - 1].tileType = GridTile.TileType.wall;
-        baseGrid[x + 1, y- 1].tileType = GridTile.TileType.wall;
-        baseGrid[x + 2, y - 1].tileType = GridTile.TileType.wall;
-        baseGrid[x + 3, y - 1].tileType = GridTile.TileType.wall;
-
-        baseGrid[x, y - 2].building = refinery;
-        baseGrid[x + 1, y - 2].tileType = GridTile.TileType.wall;
-        baseGrid[x + 2, y - 2].tileType = GridTile.TileType.wall;
-        baseGrid[x + 3, y - 2].building = refinery;
-        baseGrid[x + 3, y - 2].buildingSprite = true;
-    }
-
-    public void StartSim() {
-        m_running = true;
-    }
-
-    public void StopSim() {
-        m_running = false;
-    }
-
-    public void ResetBoard() {
-        m_crashed = false;
-
-        // Make a Duplicate
-        GridTile[,] newBaseGrid = new GridTile[GRID_WIDTH, GRID_HEIGHT];
-        for (int i = 0; i < GRID_WIDTH; i++) {
-            for (int j = 0; j < GRID_HEIGHT; j++) {
-                newBaseGrid[i, j] = baseGrid[i, j];
-            }
-        }
-
-        // Reset All Tiles
-        for (int i = 0; i < GRID_WIDTH; i++) {
-            for (int j = 0; j < GRID_HEIGHT; j++) {
-                if (baseGrid[i, j].tileType == GridTile.TileType.rover) {
-                    Rover rover = baseGrid[i, j].rover;
-                    rover.ResetRover();
-                    Vector2 startPos = rover.startPos;
-                    int x = (int)startPos.x;
-                    int y = (int)startPos.y;
-
-                    newBaseGrid[x, y] = baseGrid[i, j];
-                    if(x != i || y != j)
-                        newBaseGrid[i, j] = new GridTile(GridTile.TileType.open);
-                }
-                else if (baseGrid[i, j].tileType == GridTile.TileType.building) {
-                    baseGrid[i, j].building.Reset();
-                }
-            }
-        }
-
-        baseGrid = newBaseGrid;
-    }
-
-    void MoveTile(GridTile[,] tileGrid, int i, int j, Direction direction) {
-        bool valid = false;
-        switch (direction) {
-            case Direction.north:
-                if (j + 1 < GRID_HEIGHT) {
-                    if (tileGrid[i, j + 1].tileType == GridTile.TileType.open) {
-                        tileGrid[i, j + 1] = tileGrid[i, j];
-                        valid = true;
-                    }
-                }
-                break;
-            case Direction.east:
-                if (i + 1 < GRID_WIDTH) {
-                    if (tileGrid[i + 1, j].tileType == GridTile.TileType.open) {
-                        tileGrid[i + 1, j] = tileGrid[i, j];
-                        valid = true;
-                    }
-                }
-                break;
-            case Direction.west:
-                if (i - 1 >= 0) {
-                    if (tileGrid[i - 1, j].tileType == GridTile.TileType.open) {
-                        tileGrid[i - 1, j] = tileGrid[i, j];
-                        valid = true;
-                    }
-                }
-                break;
-            case Direction.south:
-                if (j - 1 >= 0) {
-                    if (tileGrid[i, j - 1].tileType == GridTile.TileType.open) {
-                        tileGrid[i, j - 1] = tileGrid[i, j];
-                        valid = true;
-                    }
-                }
-                break;
-        }
-        if (!valid) {
-            tileGrid[i, j].rover.crashed = true;
-            m_crashed = true;
-            StopSim();
-        }
-        else tileGrid[i, j] = new GridTile(GridTile.TileType.open);
-    }
-
-    void GrabTile(int i, int j) {
-        Rover rover = baseGrid[i, j].rover;
-        Direction direction = rover.direction;
-        switch (direction) {
-            case Direction.north:
-                break;
-            case Direction.east:
-                if (baseGrid[i + 1, j].tileType == GridTile.TileType.building) {
-                    ResourceType resource = baseGrid[i + 1, j].building.PickUp(direction);
-                    rover.resource = resource;
-                }
-                break;
-            case Direction.west:
-                if (baseGrid[i - 1, j].tileType == GridTile.TileType.building) {
-                    ResourceType resource = baseGrid[i - 1, j].building.PickUp(direction);
-                    rover.resource = resource;
-                }
-                break;
-            case Direction.south:
-                break;
-        }
-    }
-
-    void DropTile(int i, int j) {
-        Rover rover = baseGrid[i, j].rover;
-        Direction direction = rover.direction;
-        switch (direction) {
-            case Direction.north:
-                if (baseGrid[i, j + 1].tileType == GridTile.TileType.building) {
-                    if (baseGrid[i, j + 1].building.DropOff(rover.resource, direction)) {
-                        rover.resource = ResourceType.none;
-                    }
-                }
-                else if (baseGrid[i, j + 1].tileType == GridTile.TileType.rover) {
-                    Rover otherRover = baseGrid[i, j + 1].rover;
-                    if (otherRover.resource == ResourceType.none) {
-                        otherRover.resource = rover.resource;
-                        rover.resource = ResourceType.none;
-                    }
-                }
-                break;
-            case Direction.east:
-                if (baseGrid[i + 1, j].tileType == GridTile.TileType.building) {
-                    if (baseGrid[i + 1, j].building.DropOff(rover.resource, direction)) {
-                        rover.resource = ResourceType.none;
-                    }
-                }
-                else if (baseGrid[i + 1, j].tileType == GridTile.TileType.rover) {
-                    Rover otherRover = baseGrid[i + 1, j].rover;
-                    if (otherRover.resource == ResourceType.none) {
-                        otherRover.resource = rover.resource;
-                        rover.resource = ResourceType.none;
-                    }
-                }
-                break;
-            case Direction.west:
-                if (baseGrid[i - 1, j].tileType == GridTile.TileType.building) {
-                    if (baseGrid[i - i, j].building.DropOff(rover.resource, direction)) {
-                        rover.resource = ResourceType.none;
-                    }
-                }
-                else if (baseGrid[i - 1, j].tileType == GridTile.TileType.rover) {
-                    Rover otherRover = baseGrid[i - 1, j].rover;
-                    if (otherRover.resource == ResourceType.none) {
-                        otherRover.resource = rover.resource;
-                        rover.resource = ResourceType.none;
-                    }
-                }
-                break;
-            case Direction.south:
-                if (baseGrid[i, j - 1].tileType == GridTile.TileType.building) {
-                    if (baseGrid[i, j - 1].building.DropOff(rover.resource, direction)) {
-                        rover.resource = ResourceType.none;
-                    }
-                }
-                else if (baseGrid[i, j - 1].tileType == GridTile.TileType.rover) {
-                    Rover otherRover = baseGrid[i, j - 1].rover;
-                    if (otherRover.resource == ResourceType.none) {
-                        otherRover.resource = rover.resource;
-                        rover.resource = ResourceType.none;
-                    }
-                }
-                break;
-        }
-    }
-
-    public void RemoveRover(Rover rover) {
-        for (int i = 0; i < GRID_WIDTH; i++) {
-            for (int j = 0; j < GRID_HEIGHT; j++) {
-                if (baseGrid[i, j].tileType == GridTile.TileType.rover) {
-                    if (baseGrid[i, j].rover == rover) {
-                        baseGrid[i, j] = new GridTile(GridTile.TileType.open);
-                    }
-                }
-            }
-        }
-    }
-
-    public void CalculateMoves() {
-        // Generate a Copy of baseGrid
-        GridTile[,] newBaseGrid = new GridTile[GRID_WIDTH, GRID_HEIGHT];
-        for (int i = 0; i < GRID_WIDTH; i++) {
-            for (int j = 0; j < GRID_HEIGHT; j++) {
-                newBaseGrid[i, j] = baseGrid[i, j];
-            }
-        }
-
-        // Iterate through all the tiles and update the board.
-        for (int i = 0; i < GRID_WIDTH; i++) {
-            for (int j = 0; j < GRID_HEIGHT; j++) {
-                if (baseGrid[i, j].tileType == GridTile.TileType.rover) {
-                    Rover rover = baseGrid[i, j].rover;
-                    Rover.ActionType action = rover.currentAction;
-                    switch (action) {
-                        case Rover.ActionType.forward:
-                            MoveTile(newBaseGrid, i, j, rover.direction);
-                            break;
-                        case Rover.ActionType.turnRight:
-                            rover.TurnRight();
-                            break;
-                        case Rover.ActionType.turnLeft:
-                            rover.TurnLeft();
-                            break;
-                        case Rover.ActionType.grab:
-                            if (rover.resource == ResourceType.none) GrabTile(i, j);
-                            break;
-                        case Rover.ActionType.drop:
-                            if (rover.resource != ResourceType.none) DropTile(i, j);
-                            break;
-                    }
-                    if (m_running) rover.AdvanceAction();
-                }
-                else if (baseGrid[i, j].tileType == GridTile.TileType.building) {
-                    baseGrid[i, j].building.Update();
-                }
-            }
-        }
-
-        baseGrid = newBaseGrid;
-    }
-
-    public void BuyPart(GUISystem.ButtonType buttonType, int x, int y) {
-        switch (buttonType) {
-            case GUISystem.ButtonType.rover:
-                baseGrid[x, y].rover = new Rover(x, y);
-                break;
-        }
-    }
+    #endregion
 }
