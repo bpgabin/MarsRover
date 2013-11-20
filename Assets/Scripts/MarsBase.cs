@@ -122,7 +122,7 @@ public class MarsBase {
         public override bool DropOff(ResourceType rType, Direction direction) {
             if (docked) {
                 if (direction == Direction.south) {
-                    if (rType == ResourceType.refinedIron) {
+                    if (rType == ResourceType.refinedIron || rType == ResourceType.doubleRefinedIron || rType == ResourceType.tripleRefinedIron) {
                         storedResources.Add(rType);
                         return true;
                     }
