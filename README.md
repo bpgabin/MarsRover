@@ -1,7 +1,8 @@
 Red Rover
 =========
+Visual programming game created using Unity 4 for a Game Design Practicum course at University of California, Santa Cruz.
 
-Visual programming game created using Unity 4 for a Game Design Practicum course at University of California, Santa Cruz. The game was submitted to Kongregate and you can play it here: http://www.kongregate.com/games/Caereus/red-rover
+The game can be played on Kongregate here: http://www.kongregate.com/games/Caereus/red-rover
 
 Team
 ---------
